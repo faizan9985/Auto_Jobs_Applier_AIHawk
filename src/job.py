@@ -1,4 +1,4 @@
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from typing import Optional
 
 from src.job_application_profile import CandidateEligibility
@@ -19,6 +19,10 @@ class Job:
     pdf_path: str = ""
     recruiter_link: str = ""
     eligibility: Optional[dict] = None
+    cover_letter_path: str = ""
+    application_status: Optional[str] = None
+    approval: Optional[dict] = None
+    application_answers: list = field(default_factory=list)
 
     def evaluate_eligibility(self, candidate_eligibility=None):
         """Attach advisory metadata only; never decide whether to apply."""

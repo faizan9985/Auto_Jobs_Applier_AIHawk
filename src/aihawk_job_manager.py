@@ -43,10 +43,14 @@ class AIHawkJobManager:
         self.driver = driver
         self.set_old_answers = set()
         self.easy_applier_component = None
+        self.manual_approval_before_submit = True
         logger.debug("AIHawkJobManager initialized successfully")
 
     def set_parameters(self, parameters):
         logger.debug("Setting parameters for AIHawkJobManager")
+        self.manual_approval_before_submit = parameters.get('manual_approval_before_submit', True)
+        if type(self.manual_approval_before_submit) is not bool:
+            raise ValueError("manual_approval_before_submit must be a boolean")
         self.company_blacklist = parameters.get('company_blacklist', []) or []
         self.title_blacklist = parameters.get('title_blacklist', []) or []
         self.location_blacklist = parameters.get('location_blacklist', []) or []
@@ -122,7 +126,8 @@ class AIHawkJobManager:
     def start_applying(self):
         logger.debug("Starting job application process")
         self.easy_applier_component = AIHawkEasyApplier(self.driver, self.resume_path, self.set_old_answers,
-                                                          self.gpt_answerer, self.resume_generator_manager)
+                                                          self.gpt_answerer, self.resume_generator_manager,
+                                                          self.manual_approval_before_submit)
         searches = list(product(self.positions, self.locations))
         random.shuffle(searches)
         page_sleep = 0
@@ -153,7 +158,9 @@ class AIHawkJobManager:
                         break
 
                     try:
-                        self.apply_jobs()
+                        if self.apply_jobs() == "aborted":
+                            logger.info("Application run stopped by user.")
+                            return "aborted"
                     except Exception as e:
                         logger.error(f"Error during job application: {e}")
                         continue
@@ -378,13 +385,18 @@ class AIHawkJobManager:
                 continue
             try:
                 if job.apply_method not in {"Continue", "Applied", "Apply"}:
-                    self.easy_applier_component.job_apply(job)
-                    self.write_to_file(job, "success")
-                    logger.debug(f"Applied to job: {job.title} at {job.company}")
+                    status = self.easy_applier_component.job_apply(job)
+                    if status not in {"submitted", "skipped_by_user", "deferred_for_review", "aborted"}:
+                        raise ValueError(f"Unexpected application status: {status}")
+                    job.application_status = status
+                    self.write_to_file(job, "success" if status == "submitted" else status)
+                    if status == "aborted":
+                        return status
                 else:
                     self.write_to_file(job, "skipped")
             except Exception as e:
                 logger.error(f"Failed to apply for {job.title} at {job.company}: {e}")
+                job.application_status = "failed"
                 self.write_to_file(job, "failed")
                 continue
 
@@ -402,7 +414,11 @@ class AIHawkJobManager:
             "job_recruiter": job.recruiter_link,
             "job_location": job.location,
             "pdf_path": pdf_path,
-            "eligibility": job.eligibility
+            "eligibility": job.eligibility,
+            "application_status": job.application_status or file_name,
+            "approval": job.approval,
+            "cover_letter_path": job.cover_letter_path,
+            "application_answers": job.application_answers
         }
         file_path = self.output_file_directory / f"{file_name}.json"
         if not file_path.exists():

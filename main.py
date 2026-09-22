@@ -41,6 +41,9 @@ class ConfigValidator:
     @staticmethod
     def validate_config(config_yaml_path: Path) -> dict:
         parameters = ConfigValidator.validate_yaml_file(config_yaml_path)
+        parameters.setdefault('manual_approval_before_submit', True)
+        if type(parameters['manual_approval_before_submit']) is not bool:
+            raise ConfigError("manual_approval_before_submit must be a boolean")
         required_keys = {
             'remote': bool,
             'experienceLevel': dict,

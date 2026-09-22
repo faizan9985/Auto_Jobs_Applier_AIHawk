@@ -30,6 +30,7 @@ locations:
   - Germany
 
 apply_once_at_company: true
+manual_approval_before_submit: true
 
 distance: 100
 

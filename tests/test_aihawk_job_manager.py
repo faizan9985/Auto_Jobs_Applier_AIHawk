@@ -145,6 +145,7 @@ def test_apply_jobs_with_jobs(mocker, job_manager):
 
     # Mock the AIHawkEasyApplier component
     job_manager.easy_applier_component = mocker.Mock()
+    job_manager.easy_applier_component.job_apply.return_value = "submitted"
 
     # Mock the output_file_directory as a valid Path object
     job_manager.output_file_directory = Path("/mocked/path/to/output")
