@@ -1,10 +1,29 @@
-# Review-only job eligibility evaluation
+# Job eligibility evaluation and stored-job gating
 
 `JobEligibilityEvaluator.evaluate(description: str, candidate: CandidateEligibility)`
 returns an `EligibilityResult` dataclass. It performs no I/O or LLM calls.
 The Easy Apply flow retrieves the description when missing, attaches a review
 to `Job.eligibility`, and logs its status, sponsorship status, and reasons before
-opening the form. Eligibility never changes filtering or final submission.
+opening the form. Stored-job selection enforces persisted eligibility by default;
+manual approval still controls final submission where configured.
+
+`enforce_eligibility_filter: true` is the default in config.yaml. In
+`AIHawkJobManager.apply_jobs()`, before claiming a job or calling `job_apply`,
+persisted `ineligible` results cause an atomic transition to `skipped` with
+`application_status=skipped`, `skip_reason=ineligible`, and no failure reason.
+The full stored eligibility result and relevance data remain unchanged. No job
+page/form is opened and no tailored documents are generated for that job.
+SQLite schema v3 adds the nullable `skip_reason` column and records the skip
+reason and full eligibility evidence in the state event and JSON export.
+
+`eligible` proceeds normally. `needs_review` prints a prominent warning with its
+reasons and proceeds to the existing application and approval flow. Jobs without
+a persisted result are evaluated once from stored text and the candidate profile.
+Set the flag to `false` to retain advisory behavior, allowing ineligible jobs too.
+Existing skipped records are not automatically restored by changing the flag.
+Explicitly selected failed/deferred/interrupted retries are gated as well;
+submitted jobs cannot be transitioned by the gate. Eligibility rules and relevance
+scores are unchanged, and low relevance never causes this gate to skip a job.
 
 The shared output writer persists an `eligibility` block in success, failed,
 skipped, and collected (`data`) records. Jobs without a review are evaluated
@@ -96,5 +115,5 @@ They accept only booleans or null, as do the existing boolean facts. Visa labels
 OPT/STEM OPT flags, and other profile sections never supply inferred facts.
 
 This is a conservative English pattern evaluator, not a general natural-language
-parser. Unsupported wording should be reviewed. It is intentionally isolated
-from production filtering while its coverage is evaluated.
+parser. Unsupported wording should be reviewed. Only its explicit `ineligible`
+classification is blocked by the stored-job selection gate.

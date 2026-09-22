@@ -44,6 +44,7 @@ class AIHawkJobManager:
         self.set_old_answers = set()
         self.easy_applier_component = None
         self.manual_approval_before_submit = True
+        self.enforce_eligibility_filter = True
         self.job_store = None
         self.database_path = Path("data_folder/output/jobs.sqlite3")
         self.retry_failed = False
@@ -56,6 +57,9 @@ class AIHawkJobManager:
     def set_parameters(self, parameters):
         logger.debug("Setting parameters for AIHawkJobManager")
         self.manual_approval_before_submit = parameters.get('manual_approval_before_submit', True)
+        self.enforce_eligibility_filter = parameters.get('enforce_eligibility_filter', True)
+        if type(self.enforce_eligibility_filter) is not bool:
+            raise ValueError("enforce_eligibility_filter must be a boolean")
         if type(self.manual_approval_before_submit) is not bool:
             raise ValueError("manual_approval_before_submit must be a boolean")
         self.company_blacklist = parameters.get('company_blacklist', []) or []
@@ -253,8 +257,26 @@ class AIHawkJobManager:
             store.rescore(self.relevance_resume, states, self.selected_job_ids)
         for row in store.list_jobs(states, self.selected_job_ids):
             job = store.to_job(row)
-            job.evaluate_eligibility(self._candidate())
-            store.evaluate(job)
+            # Persisted discovery evaluation is authoritative for selection.
+            # Legacy/imported jobs without a result are evaluated once locally.
+            if job.eligibility is None:
+                job.evaluate_eligibility(self._candidate())
+                store.evaluate(job)
+                row = store.get(job.job_id)
+            status = job.eligibility.get('status')
+            if self.enforce_eligibility_filter and status == 'ineligible':
+                try:
+                    store.skip_ineligible(job.job_id, expected_state=row['state'])
+                except ValueError:
+                    logger.info(f"Job {job.job_id} changed before eligibility gating; leaving it alone")
+                    continue
+                job.application_status = 'skipped'
+                logger.info(f"Skipping ineligible job {job.job_id}: {job.eligibility.get('reasons', [])}")
+                self._export_result(job, 'skipped')
+                continue
+            if status == 'needs_review':
+                utils.printyellow(f"ELIGIBILITY REVIEW REQUIRED: {job.title} at {job.company}\n"
+                                  + '\n'.join(str(reason) for reason in job.eligibility.get('reasons', [])))
             if (self.is_blacklisted(job.title, job.company, job.link, job.location) or
                     (self.apply_once_at_company and store.has_submitted_company(job.company)) or
                     job.apply_method in {"Continue", "Applied", "Apply"}):
@@ -323,7 +345,7 @@ class AIHawkJobManager:
         if self.job_store is not None and job.job_id:
             row = self.job_store.get(job.job_id)
             data.update(state=row['state'], submitted_at=row['submitted_at'],
-                        failure_reason=row['failure_reason'])
+                        failure_reason=row['failure_reason'], skip_reason=row['skip_reason'])
         file_path = self.output_file_directory / f"{file_name}.json"
         self.output_file_directory.mkdir(parents=True, exist_ok=True)
         if not file_path.exists():

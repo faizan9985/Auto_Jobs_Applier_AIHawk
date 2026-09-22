@@ -54,3 +54,4 @@ llm_model: 'gpt-4o-mini'
 # llm_api_url: https://api.pawan.krd/cosmosrp/v1'
 # Advisory only: pending listings label lower scores; no automatic rejection.
 minimum_relevance_score: 0
+enforce_eligibility_filter: true

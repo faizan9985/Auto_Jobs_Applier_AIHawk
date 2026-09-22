@@ -60,7 +60,7 @@ class JobStore:
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
         with self.connect() as db:
-            if db.execute("PRAGMA user_version").fetchone()[0] > 2:
+            if db.execute("PRAGMA user_version").fetchone()[0] > 3:
                 raise ValueError("Job database schema is newer than this application supports")
             db.executescript("""
                 CREATE TABLE IF NOT EXISTS jobs (
@@ -97,7 +97,9 @@ class JobStore:
             for name in ('matched_skills', 'missing_required_skills', 'matched_projects', 'reasons'):
                 if name not in columns:
                     db.execute(f'ALTER TABLE jobs ADD COLUMN {name} TEXT')
-            db.execute('PRAGMA user_version = 2')
+            if 'skip_reason' not in columns:
+                db.execute('ALTER TABLE jobs ADD COLUMN skip_reason TEXT')
+            db.execute('PRAGMA user_version = 3')
 
     @contextmanager
     def connect(self):
@@ -223,6 +225,28 @@ class JobStore:
             db.execute("UPDATE jobs SET eligibility=?,description=?,state=? WHERE id=?",
                        (json.dumps(job.eligibility), job.description or "", state, job.job_id))
             self._event(db, job.job_id, state, {"eligibility": job.eligibility})
+
+    def skip_ineligible(self, job_id, expected_state):
+        """Atomically gate a selected job without claiming it or replacing evidence.
+
+        Retry states are accepted only when explicitly selected by the caller.
+        This narrow transition cannot skip submitted jobs or non-ineligible jobs.
+        """
+        with self.connect() as db:
+            db.execute('BEGIN IMMEDIATE')
+            row = db.execute('SELECT * FROM jobs WHERE id=?', (job_id,)).fetchone()
+            if row is None:
+                raise KeyError(job_id)
+            eligibility = json.loads(row['eligibility'] or 'null') or {}
+            if (row['state'] != expected_state or row['state'] not in
+                    (*PENDING, 'failed', 'deferred', 'applying', 'approved') or
+                    eligibility.get('status') != 'ineligible'):
+                raise ValueError('Job state or eligibility changed before gating')
+            db.execute("""UPDATE jobs SET state='skipped', application_status='skipped',
+                          skip_reason='ineligible', failure_reason=NULL WHERE id=?""", (job_id,))
+            self._event(db, job_id, 'skipped', {'skip_reason': 'ineligible',
+                                              'eligibility': eligibility,
+                                              'application_status': 'skipped'})
 
     def transition(self, job, state, failure_reason=None, retry=False, expected_state=None):
         if state not in STATES:

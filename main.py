@@ -44,6 +44,9 @@ class ConfigValidator:
         parameters = ConfigValidator.validate_yaml_file(config_yaml_path)
         validate_threshold(parameters.get('minimum_relevance_score', 0))
         parameters.setdefault('manual_approval_before_submit', True)
+        parameters.setdefault('enforce_eligibility_filter', True)
+        if type(parameters['enforce_eligibility_filter']) is not bool:
+            raise ConfigError("enforce_eligibility_filter must be a boolean")
         if type(parameters['manual_approval_before_submit']) is not bool:
             raise ConfigError("manual_approval_before_submit must be a boolean")
         required_keys = {

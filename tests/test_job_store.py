@@ -26,7 +26,7 @@ def test_creation_and_reopen(store):
     assert row["discovered_at"] == row["last_seen_at"]
     assert JobStore(store.path).get(job.job_id) == row
     with store.connect() as db:
-        assert db.execute("PRAGMA user_version").fetchone()[0] == 2
+        assert db.execute("PRAGMA user_version").fetchone()[0] == 3
         assert db.execute("SELECT count(*) FROM job_events").fetchone()[0] == 1
 
 
