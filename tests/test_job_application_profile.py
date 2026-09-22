@@ -210,6 +210,10 @@ def test_complete_eligibility_profile(valid_yaml):
         "work_authorization_end_date": "2031-05-31",
         "willing_to_relocate": False,
         "target_countries": ["United States", "Canada"],
+        "is_us_citizen": False,
+        "is_us_permanent_resident": False,
+        "currently_enrolled": True,
+        "returning_to_school_after_internship": False,
     }
     profile = JobApplicationProfile(eligibility_yaml(valid_yaml, facts))
     expected = {

@@ -77,6 +77,10 @@ class CandidateEligibility:
     work_authorization_end_date: Optional[date] = None
     willing_to_relocate: Optional[bool] = None
     target_countries: Optional[List[str]] = None
+    is_us_citizen: Optional[bool] = None
+    is_us_permanent_resident: Optional[bool] = None
+    currently_enrolled: Optional[bool] = None
+    returning_to_school_after_internship: Optional[bool] = None
 
     def __post_init__(self):
         for name in (
@@ -97,6 +101,8 @@ class CandidateEligibility:
         for name in (
             "opt_eligible", "stem_opt_eligible", "requires_future_h1b_sponsorship",
             "currently_authorized_to_work_in_us", "willing_to_relocate",
+            "is_us_citizen", "is_us_permanent_resident", "currently_enrolled",
+            "returning_to_school_after_internship",
         ):
             value = getattr(self, name)
             if value is not None and type(value) is not bool:
