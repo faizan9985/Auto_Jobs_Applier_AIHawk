@@ -1,4 +1,7 @@
 from dataclasses import dataclass
+from datetime import date
+import re
+from typing import List, Optional
 
 import yaml
 
@@ -56,12 +59,66 @@ class SalaryExpectations:
 
 
 @dataclass
+class CandidateEligibility:
+    """Optional, user-provided facts; None means unspecified, never ineligible.
+
+    These facts are stored for future screening and do not drive application
+    answers or filtering. No values are derived from other profile sections.
+    """
+
+    current_visa_status: Optional[str] = None
+    graduation_date: Optional[date] = None
+    earliest_start_date: Optional[date] = None
+    opt_eligible: Optional[bool] = None
+    stem_opt_eligible: Optional[bool] = None
+    requires_future_h1b_sponsorship: Optional[bool] = None
+    currently_authorized_to_work_in_us: Optional[bool] = None
+    work_authorization_start_date: Optional[date] = None
+    work_authorization_end_date: Optional[date] = None
+    willing_to_relocate: Optional[bool] = None
+    target_countries: Optional[List[str]] = None
+
+    def __post_init__(self):
+        for name in (
+            "graduation_date", "earliest_start_date",
+            "work_authorization_start_date", "work_authorization_end_date",
+        ):
+            value = getattr(self, name)
+            if value is None or type(value) is date:
+                continue
+            if isinstance(value, str) and re.fullmatch(r"\d{4}-\d{2}-\d{2}", value):
+                try:
+                    setattr(self, name, date.fromisoformat(value))
+                    continue
+                except ValueError:
+                    pass
+            raise ValueError(f"candidate_eligibility.{name} must be a valid YYYY-MM-DD date or null.")
+
+        for name in (
+            "opt_eligible", "stem_opt_eligible", "requires_future_h1b_sponsorship",
+            "currently_authorized_to_work_in_us", "willing_to_relocate",
+        ):
+            value = getattr(self, name)
+            if value is not None and type(value) is not bool:
+                raise TypeError(f"candidate_eligibility.{name} must be a YAML boolean or null.")
+
+        if self.current_visa_status is not None and not isinstance(self.current_visa_status, str):
+            raise TypeError("candidate_eligibility.current_visa_status must be a string or null.")
+        if self.target_countries is not None and (
+            not isinstance(self.target_countries, list)
+            or any(not isinstance(country, str) or not country.strip() for country in self.target_countries)
+        ):
+            raise TypeError("candidate_eligibility.target_countries must be a list of nonempty strings or null.")
+
+
+@dataclass
 class JobApplicationProfile:
     self_identification: SelfIdentification
     legal_authorization: LegalAuthorization
     work_preferences: WorkPreferences
     availability: Availability
     salary_expectations: SalaryExpectations
+    candidate_eligibility: CandidateEligibility
 
     def __init__(self, yaml_str: str):
         logger.debug("Initializing JobApplicationProfile with provided YAML string")
@@ -71,6 +128,9 @@ class JobApplicationProfile:
         except yaml.YAMLError as e:
             logger.error(f"Error parsing YAML file: {e}")
             raise ValueError("Error parsing YAML file.") from e
+        except ValueError as e:
+            # PyYAML validates unquoted ISO dates while constructing values.
+            raise ValueError(f"Invalid YAML value (check date fields for valid YYYY-MM-DD dates): {e}") from e
         except Exception as e:
             logger.error(f"Unexpected error occurred while parsing the YAML file: {e}")
             raise RuntimeError("An unexpected error occurred while parsing the YAML file.") from e
@@ -168,6 +228,13 @@ class JobApplicationProfile:
         except Exception as e:
             logger.error(f"An unexpected error occurred while processing salary_expectations: {e}")
             raise RuntimeError("An unexpected error occurred while processing salary_expectations.") from e
+
+        eligibility = data.get('candidate_eligibility')
+        if eligibility is None:
+            eligibility = {}
+        if not isinstance(eligibility, dict):
+            raise TypeError("candidate_eligibility must be a mapping or null.")
+        self.candidate_eligibility = CandidateEligibility(**eligibility)
 
         logger.debug("JobApplicationProfile initialization completed successfully.")
 

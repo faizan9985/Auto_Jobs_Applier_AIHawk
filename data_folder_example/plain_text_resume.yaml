@@ -130,6 +130,23 @@ legal_authorization:
   requires_uk_sponsorship: "No"
 
 
+# OPTIONAL EXAMPLE PLACEHOLDERS ONLY: replace null with your own factual values.
+# No eligibility is inferred. Omit unknown values or leave them null.
+# Dates: YYYY-MM-DD (e.g. "2030-05-15", illustrative only).
+# Booleans: true / false (unquoted), or null when unknown.
+candidate_eligibility:
+  current_visa_status: null # Your stated status, e.g. "F-1"; not an eligibility determination.
+  graduation_date: null
+  earliest_start_date: null
+  opt_eligible: null
+  stem_opt_eligible: null
+  requires_future_h1b_sponsorship: null
+  currently_authorized_to_work_in_us: null
+  work_authorization_start_date: null
+  work_authorization_end_date: null
+  willing_to_relocate: null
+  target_countries: null # Your list of country names, e.g. ["United States"].
+
 work_preferences:
   remote_work: "Yes"
   in_person_work: "Yes"
