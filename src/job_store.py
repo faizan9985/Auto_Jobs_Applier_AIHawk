@@ -60,7 +60,7 @@ class JobStore:
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
         with self.connect() as db:
-            if db.execute("PRAGMA user_version").fetchone()[0] > 1:
+            if db.execute("PRAGMA user_version").fetchone()[0] > 2:
                 raise ValueError("Job database schema is newer than this application supports")
             db.executescript("""
                 CREATE TABLE IF NOT EXISTS jobs (
@@ -88,8 +88,16 @@ class JobStore:
                     job_id TEXT NOT NULL REFERENCES jobs(id),
                     state TEXT NOT NULL, occurred_at TEXT NOT NULL, metadata TEXT NOT NULL
                 );
-                PRAGMA user_version = 1;
             """)
+            columns = {r['name'] for r in db.execute('PRAGMA table_info(jobs)')}
+            for name in ('total_score', 'skill_score', 'role_score', 'project_score',
+                         'experience_score', 'education_score', 'location_score'):
+                if name not in columns:
+                    db.execute(f'ALTER TABLE jobs ADD COLUMN {name} REAL')
+            for name in ('matched_skills', 'missing_required_skills', 'matched_projects', 'reasons'):
+                if name not in columns:
+                    db.execute(f'ALTER TABLE jobs ADD COLUMN {name} TEXT')
+            db.execute('PRAGMA user_version = 2')
 
     @contextmanager
     def connect(self):
@@ -160,7 +168,7 @@ class JobStore:
             raise KeyError(job_id)
         return dict(row)
 
-    def list_jobs(self, states=PENDING, job_ids=()):
+    def list_jobs(self, states=PENDING, job_ids=(), top=None):
         if not states:
             return []
         query = "SELECT * FROM jobs WHERE state IN (" + ",".join("?" for _ in states) + ")"
@@ -169,7 +177,29 @@ class JobStore:
             query += " AND id IN (" + ",".join("?" for _ in job_ids) + ")"
             params.extend(job_ids)
         with self.connect() as db:
-            return [dict(row) for row in db.execute(query + " ORDER BY discovered_at,id", params)]
+            rows = [dict(row) for row in db.execute(query, params)]
+        def priority(row):
+            status = (json.loads(row['eligibility'] or 'null') or {}).get('status')
+            return ({'eligible': 0, 'needs_review': 1, 'ineligible': 3}.get(status, 2),
+                    -(row['total_score'] if row['total_score'] is not None else -1),
+                    row['discovered_at'], row['id'])
+        return sorted(rows, key=priority)[:top]
+
+    def score(self, job, resume):
+        """Persist relevance only, preserving eligibility, state and approval."""
+        from src.job_relevance import score_job
+        result = score_job(job, resume)
+        values = {k: json.dumps(v) if isinstance(v, list) else v for k, v in result.items()}
+        with self.connect() as db:
+            cursor = db.execute('UPDATE jobs SET ' + ','.join(f'{k}=?' for k in values) + ' WHERE id=?',
+                                (*values.values(), job.job_id))
+            if not cursor.rowcount:
+                raise KeyError(job.job_id)
+        return result
+
+    def rescore(self, resume, states=PENDING, job_ids=()):
+        for row in self.list_jobs(states, job_ids):
+            self.score(self.to_job(row), resume)
 
     @staticmethod
     def to_job(row):

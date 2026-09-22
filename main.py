@@ -14,6 +14,7 @@ from src.aihawk_bot_facade import AIHawkBotFacade
 from src.aihawk_job_manager import AIHawkJobManager
 from src.job_application_profile import JobApplicationProfile
 from src.job_store import JobStore, PENDING
+from src.job_relevance import validate_threshold
 from types import SimpleNamespace
 from loguru import logger
 
@@ -41,6 +42,7 @@ class ConfigValidator:
     @staticmethod
     def validate_config(config_yaml_path: Path) -> dict:
         parameters = ConfigValidator.validate_yaml_file(config_yaml_path)
+        validate_threshold(parameters.get('minimum_relevance_score', 0))
         parameters.setdefault('manual_approval_before_submit', True)
         if type(parameters['manual_approval_before_submit']) is not bool:
             raise ConfigError("manual_approval_before_submit must be a boolean")
@@ -219,8 +221,11 @@ def create_and_run_bot(parameters, llm_api_key):
 @click.option('--include-deferred', is_flag=True, help="Include jobs previously deferred or aborted")
 @click.option('--retry-interrupted', is_flag=True, help="Retry applying/approved jobs after checking they were not submitted")
 @click.option('--job-id', 'job_ids', multiple=True, help="Limit application or listing to internal job IDs")
+@click.option('--top', type=click.IntRange(min=1), default=None, help="Show at most N pending jobs")
+@click.option('--minimum-relevance-score', type=click.FloatRange(0, 100), default=None,
+              help="Advisory threshold; jobs below it remain pending")
 def main(collect=False, resume=None, mode='apply', database=None, retry_failed=False,
-         include_deferred=False, retry_interrupted=False, job_ids=()):
+         include_deferred=False, retry_interrupted=False, job_ids=(), top=None, minimum_relevance_score=None):
     try:
         data_folder = Path("data_folder")
         output_folder = data_folder / 'output'
@@ -235,8 +240,19 @@ def main(collect=False, resume=None, mode='apply', database=None, retry_failed=F
                 click.echo(f"Imported {store.import_json(output_folder)} records into {database}")
             else:
                 states = (*PENDING, 'deferred', 'failed', 'applying', 'approved')
-                for row in store.list_jobs(states, job_ids):
-                    click.echo(f"{row['id']} | {row['state']} | {row['company']} | {row['title']} | {row['job_url']}")
+                config_path = data_folder / 'config.yaml'
+                config = (yaml.safe_load(config_path.read_text(encoding='utf-8')) or {}) if config_path.exists() else {}
+                threshold = validate_threshold(minimum_relevance_score if minimum_relevance_score is not None
+                                               else config.get('minimum_relevance_score', 0))
+                profile_path = data_folder / 'plain_text_resume.yaml'
+                if profile_path.exists():
+                    store.rescore(yaml.safe_load(profile_path.read_text(encoding='utf-8')) or {}, states, job_ids)
+                for row in store.list_jobs(states, job_ids, top=top):
+                    score = row['total_score']
+                    label = 'unscored' if score is None else f'{score:.2f}/100'
+                    if score is not None and score < threshold:
+                        label += ' (below advisory threshold)'
+                    click.echo(f"{row['id']} | {row['state']} | {row['company']} | {row['title']} | {row['job_url']} | relevance: {label}")
             return
         if mode == 'apply':
             states = list(PENDING)

@@ -14,6 +14,7 @@ from src.job_store import JobStore, PENDING
 from src.aihawk_easy_applier import AIHawkEasyApplier
 from loguru import logger
 import urllib.parse
+import yaml
 
 
 class EnvironmentKeys:
@@ -49,6 +50,7 @@ class AIHawkJobManager:
         self.include_deferred = False
         self.retry_interrupted = False
         self.selected_job_ids = ()
+        self.relevance_resume = None
         logger.debug("AIHawkJobManager initialized successfully")
 
     def set_parameters(self, parameters):
@@ -77,6 +79,9 @@ class AIHawkJobManager:
         self.include_deferred = parameters.get('include_deferred', False)
         self.retry_interrupted = parameters.get('retry_interrupted', False)
         self.selected_job_ids = parameters.get('job_ids', ())
+        profile_path = parameters.get('uploads', {}).get('plainTextResume')
+        if profile_path:
+            self.relevance_resume = yaml.safe_load(Path(profile_path).read_text(encoding='utf-8')) or {}
         self.env_config = EnvironmentKeys()
         logger.debug("Parameters set successfully")
 
@@ -224,6 +229,8 @@ class AIHawkJobManager:
                 logger.warning(f"Description unavailable for {job.link}: {exc}")
             job.evaluate_eligibility(self._candidate())
             store.evaluate(job)
+            if self.relevance_resume is not None:
+                store.score(job, self.relevance_resume)
             if (store.get(job.job_id)["state"] in PENDING and
                     self.is_blacklisted(job.title, job.company, job.link, job.location)):
                 job.application_status = "skipped"
@@ -242,6 +249,8 @@ class AIHawkJobManager:
             states.append("deferred")
         if self.retry_interrupted:
             states.extend(["applying", "approved"])
+        if self.relevance_resume is not None:
+            store.rescore(self.relevance_resume, states, self.selected_job_ids)
         for row in store.list_jobs(states, self.selected_job_ids):
             job = store.to_job(row)
             job.evaluate_eligibility(self._candidate())
