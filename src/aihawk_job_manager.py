@@ -52,12 +52,17 @@ class AIHawkJobManager:
         self.retry_interrupted = False
         self.selected_job_ids = ()
         self.relevance_resume = None
+        self.resume_tailor = None
+        self.regenerate_resume = False
         logger.debug("AIHawkJobManager initialized successfully")
 
     def set_parameters(self, parameters):
         logger.debug("Setting parameters for AIHawkJobManager")
         self.manual_approval_before_submit = parameters.get('manual_approval_before_submit', True)
         self.enforce_eligibility_filter = parameters.get('enforce_eligibility_filter', True)
+        tailor_resume = parameters.get('tailor_resume_per_job', True)
+        if type(tailor_resume) is not bool:
+            raise ValueError('tailor_resume_per_job must be a boolean')
         if type(self.enforce_eligibility_filter) is not bool:
             raise ValueError("enforce_eligibility_filter must be a boolean")
         if type(self.manual_approval_before_submit) is not bool:
@@ -86,6 +91,12 @@ class AIHawkJobManager:
         profile_path = parameters.get('uploads', {}).get('plainTextResume')
         if profile_path:
             self.relevance_resume = yaml.safe_load(Path(profile_path).read_text(encoding='utf-8')) or {}
+        self.resume_tailor = None
+        self.regenerate_resume = parameters.get('regenerate_resume', False)
+        if tailor_resume and profile_path:
+            from src.resume_tailoring import ResumeTailor
+            self.resume_tailor = ResumeTailor(self._store(), profile_path,
+                                             self.output_file_directory / 'tailored_resumes')
         self.env_config = EnvironmentKeys()
         logger.debug("Parameters set successfully")
 
@@ -297,6 +308,12 @@ class AIHawkJobManager:
                 logger.info(f"Job {job.job_id} was already claimed; leaving it alone")
                 continue
             try:
+                if self.resume_tailor is not None:
+                    tailored = self.resume_tailor.prepare(job, regenerate=self.regenerate_resume)
+                    job.tailoring_id = tailored['id']
+                    job.tailored_resume_path = tailored['resume_path']
+                    job.tailored_resume_hash = tailored['pdf_hash']
+                    job.pdf_path = ''  # Set only after the exact file has been uploaded.
                 status = self.easy_applier_component.job_apply(job)
                 if status not in {"submitted", "skipped_by_user", "deferred_for_review", "aborted"}:
                     raise ValueError(f"Unexpected application status: {status}")

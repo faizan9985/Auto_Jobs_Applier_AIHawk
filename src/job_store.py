@@ -60,7 +60,7 @@ class JobStore:
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
         with self.connect() as db:
-            if db.execute("PRAGMA user_version").fetchone()[0] > 3:
+            if db.execute("PRAGMA user_version").fetchone()[0] > 4:
                 raise ValueError("Job database schema is newer than this application supports")
             db.executescript("""
                 CREATE TABLE IF NOT EXISTS jobs (
@@ -88,6 +88,18 @@ class JobStore:
                     job_id TEXT NOT NULL REFERENCES jobs(id),
                     state TEXT NOT NULL, occurred_at TEXT NOT NULL, metadata TEXT NOT NULL
                 );
+                CREATE TABLE IF NOT EXISTS resume_tailorings (
+                    id TEXT PRIMARY KEY, job_id TEXT NOT NULL REFERENCES jobs(id),
+                    source_hash TEXT NOT NULL, job_hash TEXT NOT NULL,
+                    algorithm_version TEXT NOT NULL, resume_path TEXT NOT NULL,
+                    pdf_hash TEXT NOT NULL, source_facts TEXT NOT NULL,
+                    selected_facts TEXT NOT NULL, matched_keywords TEXT NOT NULL,
+                    matched_skills TEXT NOT NULL, selected_experience_bullets TEXT NOT NULL,
+                    selected_projects TEXT NOT NULL, omitted_items TEXT NOT NULL,
+                    generated_at TEXT NOT NULL, approval_status TEXT NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS resume_cache_idx
+                    ON resume_tailorings(job_id, source_hash, job_hash);
             """)
             columns = {r['name'] for r in db.execute('PRAGMA table_info(jobs)')}
             for name in ('total_score', 'skill_score', 'role_score', 'project_score',
@@ -99,7 +111,7 @@ class JobStore:
                     db.execute(f'ALTER TABLE jobs ADD COLUMN {name} TEXT')
             if 'skip_reason' not in columns:
                 db.execute('ALTER TABLE jobs ADD COLUMN skip_reason TEXT')
-            db.execute('PRAGMA user_version = 3')
+            db.execute('PRAGMA user_version = 4')
 
     @contextmanager
     def connect(self):
@@ -273,6 +285,9 @@ class JobStore:
                  state, utc_now(), failure_reason, job.job_id))
             self._event(db, job.job_id, state, {"approval": approval, "failure_reason": failure_reason,
                                                "application_status": job.application_status})
+            if job.tailoring_id and approval:
+                db.execute('UPDATE resume_tailorings SET approval_status=? WHERE id=? AND job_id=?',
+                           (approval['decision'], job.tailoring_id, job.job_id))
 
     def has_submitted_company(self, company):
         with self.connect() as db:

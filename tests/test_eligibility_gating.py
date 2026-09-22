@@ -123,7 +123,7 @@ def test_schema_two_migration(manager):
     assert json.loads(store.get(job.job_id)['eligibility']) == job.eligibility
     assert store.get(job.job_id)['skip_reason'] is None
     with store.connect() as db:
-        assert db.execute('PRAGMA user_version').fetchone()[0] == 3
+        assert db.execute('PRAGMA user_version').fetchone()[0] == 4
 
 
 def test_missing_persisted_result_is_evaluated_and_allowed(manager):

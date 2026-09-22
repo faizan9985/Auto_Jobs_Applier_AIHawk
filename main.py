@@ -45,6 +45,9 @@ class ConfigValidator:
         validate_threshold(parameters.get('minimum_relevance_score', 0))
         parameters.setdefault('manual_approval_before_submit', True)
         parameters.setdefault('enforce_eligibility_filter', True)
+        parameters.setdefault('tailor_resume_per_job', True)
+        if type(parameters['tailor_resume_per_job']) is not bool:
+            raise ConfigError('tailor_resume_per_job must be a boolean')
         if type(parameters['enforce_eligibility_filter']) is not bool:
             raise ConfigError("enforce_eligibility_filter must be a boolean")
         if type(parameters['manual_approval_before_submit']) is not bool:
@@ -188,7 +191,8 @@ def create_and_run_bot(parameters, llm_api_key):
         resume_generator_manager = FacadeManager(llm_api_key, style_manager, resume_generator, resume_object, Path("data_folder/output"))
         
         # Run the resume generator manager's functions
-        resume_generator_manager.choose_style()
+        if not parameters.get('tailor_resume_per_job', True):
+            resume_generator_manager.choose_style()
         
         
         browser = init_browser()
@@ -225,10 +229,12 @@ def create_and_run_bot(parameters, llm_api_key):
 @click.option('--retry-interrupted', is_flag=True, help="Retry applying/approved jobs after checking they were not submitted")
 @click.option('--job-id', 'job_ids', multiple=True, help="Limit application or listing to internal job IDs")
 @click.option('--top', type=click.IntRange(min=1), default=None, help="Show at most N pending jobs")
+@click.option('--regenerate-resume', is_flag=True, help="Explicitly regenerate tailored resumes for selected applications")
 @click.option('--minimum-relevance-score', type=click.FloatRange(0, 100), default=None,
               help="Advisory threshold; jobs below it remain pending")
 def main(collect=False, resume=None, mode='apply', database=None, retry_failed=False,
-         include_deferred=False, retry_interrupted=False, job_ids=(), top=None, minimum_relevance_score=None):
+         include_deferred=False, retry_interrupted=False, job_ids=(), top=None, minimum_relevance_score=None,
+         regenerate_resume=False):
     try:
         data_folder = Path("data_folder")
         output_folder = data_folder / 'output'
@@ -280,6 +286,7 @@ def main(collect=False, resume=None, mode='apply', database=None, retry_failed=F
         parameters['outputFileDirectory'] = output_folder
         parameters['collectMode'] = mode == 'discover'
         parameters.update(database_path=database, retry_failed=retry_failed,
+                          regenerate_resume=regenerate_resume,
                           include_deferred=include_deferred, retry_interrupted=retry_interrupted,
                           job_ids=job_ids)
         

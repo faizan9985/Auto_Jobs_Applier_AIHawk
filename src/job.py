@@ -26,6 +26,9 @@ class Job:
     job_id: Optional[str] = None
     linkedin_job_id: Optional[str] = None
     source: str = "linkedin"
+    tailoring_id: Optional[str] = None
+    tailored_resume_path: str = ""
+    tailored_resume_hash: str = ""
 
     def evaluate_eligibility(self, candidate_eligibility=None):
         """Attach advisory metadata only; never decide whether to apply."""

@@ -1,4 +1,5 @@
 import base64
+import hashlib
 import json
 import os
 import random
@@ -6,6 +7,7 @@ import re
 import time
 import traceback
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import List, Optional, Any, Tuple
 
 from httpx import HTTPStatusError
@@ -344,6 +346,8 @@ class AIHawkEasyApplier:
         next_button = self.driver.find_element(By.CLASS_NAME, "artdeco-button--primary")
         button_text = next_button.text.lower()
         if 'submit application' in button_text:
+            if self.current_job.tailored_resume_path:
+                self._verify_tailored_resume(self.current_job, require_uploaded=True)
             decision = (self._request_submission_approval()
                         if self.manual_approval_before_submit else "auto_submit")
             self.current_job.approval = {
@@ -351,6 +355,10 @@ class AIHawkEasyApplier:
                 "timestamp": datetime.now(timezone.utc).isoformat(),
                 "manual_approval_before_submit": self.manual_approval_before_submit,
             }
+            if self.current_job.tailoring_id:
+                self.current_job.approval.update(tailoring_id=self.current_job.tailoring_id,
+                                                resume_path=self.current_job.pdf_path,
+                                                resume_hash=self.current_job.tailored_resume_hash)
             self.current_job.application_status = {
                 "approve": "approved", "auto_submit": "approved", "skip": "skipped_by_user",
                 "defer": "deferred_for_review", "abort": "aborted"}[decision]
@@ -499,7 +507,11 @@ class AIHawkEasyApplier:
             output = self.gpt_answerer.resume_or_cover(parent.text.lower())
             if 'resume' in output:
                 logger.debug("Uploading resume")
-                if self.resume_path is not None and self.resume_path.resolve().is_file():
+                if job.tailored_resume_path:
+                    self._verify_tailored_resume(job)
+                    element.send_keys(job.tailored_resume_path)
+                    job.pdf_path = job.tailored_resume_path
+                elif self.resume_path is not None and self.resume_path.resolve().is_file():
                     element.send_keys(str(self.resume_path.resolve()))
                     job.pdf_path = str(self.resume_path.resolve())
                     logger.debug(f"Resume uploaded from path: {self.resume_path.resolve()}")
@@ -511,6 +523,13 @@ class AIHawkEasyApplier:
                 self._create_and_upload_cover_letter(element, job)
 
         logger.debug("Finished handling upload fields")
+
+    @staticmethod
+    def _verify_tailored_resume(job, require_uploaded=False):
+        path = Path(job.tailored_resume_path)
+        if (not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest() != job.tailored_resume_hash
+                or (require_uploaded and job.pdf_path != job.tailored_resume_path)):
+            raise ValueError('Exact tailored resume must be uploaded and unchanged before submission')
 
     def _create_and_upload_resume(self, element, job):
         logger.debug("Starting the process of creating and uploading resume.")
