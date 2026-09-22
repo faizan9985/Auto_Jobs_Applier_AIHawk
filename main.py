@@ -8,13 +8,13 @@ from selenium import webdriver
 from selenium.webdriver.chrome.service import Service as ChromeService
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.common.exceptions import WebDriverException
-from lib_resume_builder_AIHawk import Resume, FacadeManager, ResumeGenerator, StyleManager
 from src.utils import chrome_browser_options
-from src.llm.llm_manager import GPTAnswerer
 from src.aihawk_authenticator import AIHawkAuthenticator
 from src.aihawk_bot_facade import AIHawkBotFacade
 from src.aihawk_job_manager import AIHawkJobManager
 from src.job_application_profile import JobApplicationProfile
+from src.job_store import JobStore, PENDING
+from types import SimpleNamespace
 from loguru import logger
 
 # Suppress stderr only during specific operations
@@ -161,18 +161,30 @@ def init_browser() -> webdriver.Chrome:
         raise RuntimeError(f"Failed to initialize browser: {str(e)}")
 
 def create_and_run_bot(parameters, llm_api_key):
+    browser = None
     try:
-        style_manager = StyleManager()
-        resume_generator = ResumeGenerator()
         with open(parameters['uploads']['plainTextResume'], "r", encoding='utf-8') as file:
             plain_text_resume = file.read()
+        job_application_profile_object = JobApplicationProfile(plain_text_resume)
+        if parameters['collectMode']:
+            browser = init_browser()
+            manager = AIHawkJobManager(browser)
+            manager.set_parameters(parameters)
+            manager.set_gpt_answerer(SimpleNamespace(job_application_profile=job_application_profile_object))
+            AIHawkAuthenticator(browser).start()
+            manager.start_collecting_data()
+            return
+
+        from lib_resume_builder_AIHawk import Resume, FacadeManager, ResumeGenerator, StyleManager
+        from src.llm.llm_manager import GPTAnswerer
+        style_manager = StyleManager()
+        resume_generator = ResumeGenerator()
         resume_object = Resume(plain_text_resume)
         resume_generator_manager = FacadeManager(llm_api_key, style_manager, resume_generator, resume_object, Path("data_folder/output"))
         
         # Run the resume generator manager's functions
         resume_generator_manager.choose_style()
         
-        job_application_profile_object = JobApplicationProfile(plain_text_resume)
         
         browser = init_browser()
         login_component = AIHawkAuthenticator(browser)
@@ -193,22 +205,64 @@ def create_and_run_bot(parameters, llm_api_key):
         logger.error(f"WebDriver error occurred: {e}")
     except Exception as e:
         raise RuntimeError(f"Error running the bot: {str(e)}")
+    finally:
+        if browser is not None:
+            browser.quit()
 
 
 @click.command()
 @click.option('--resume', type=click.Path(exists=True, file_okay=True, dir_okay=False, path_type=Path), help="Path to the resume PDF file")
-@click.option('--collect', is_flag=True, help="Only collects data job information into data.json file")
-def main(collect: False, resume: Path = None):
+@click.option('--collect', is_flag=True, help="Compatibility alias for --mode discover")
+@click.option('--mode', type=click.Choice(['discover', 'apply', 'pending', 'import-json']), default='apply', show_default=True)
+@click.option('--database', type=click.Path(dir_okay=False, path_type=Path), default=None)
+@click.option('--retry-failed', is_flag=True, help="Intentionally include failed jobs")
+@click.option('--include-deferred', is_flag=True, help="Include jobs previously deferred or aborted")
+@click.option('--retry-interrupted', is_flag=True, help="Retry applying/approved jobs after checking they were not submitted")
+@click.option('--job-id', 'job_ids', multiple=True, help="Limit application or listing to internal job IDs")
+def main(collect=False, resume=None, mode='apply', database=None, retry_failed=False,
+         include_deferred=False, retry_interrupted=False, job_ids=()):
     try:
         data_folder = Path("data_folder")
-        secrets_file, config_file, plain_text_resume_file, output_folder = FileManager.validate_data_folder(data_folder)
+        output_folder = data_folder / 'output'
+        database = database or output_folder / 'jobs.sqlite3'
+        if collect:
+            if mode not in {'apply', 'discover'}:
+                raise click.UsageError("--collect cannot be combined with this mode")
+            mode = 'discover'
+        if mode in {'pending', 'import-json'}:
+            store = JobStore(database)
+            if mode == 'import-json':
+                click.echo(f"Imported {store.import_json(output_folder)} records into {database}")
+            else:
+                states = (*PENDING, 'deferred', 'failed', 'applying', 'approved')
+                for row in store.list_jobs(states, job_ids):
+                    click.echo(f"{row['id']} | {row['state']} | {row['company']} | {row['title']} | {row['job_url']}")
+            return
+        if mode == 'apply':
+            states = list(PENDING)
+            if retry_failed:
+                states.append('failed')
+            if include_deferred:
+                states.append('deferred')
+            if retry_interrupted:
+                states.extend(['applying', 'approved'])
+            if not JobStore(database).list_jobs(states, job_ids):
+                click.echo("No selected pending jobs. Run --mode discover or explicitly select a retry option.")
+                return
+        config_file = data_folder / 'config.yaml'
+        plain_text_resume_file = data_folder / 'plain_text_resume.yaml'
+        output_folder.mkdir(parents=True, exist_ok=True)
         
         parameters = ConfigValidator.validate_config(config_file)
-        llm_api_key = ConfigValidator.validate_secrets(secrets_file)
+        llm_api_key = (ConfigValidator.validate_secrets(data_folder / 'secrets.yaml')
+                       if mode == 'apply' else None)
         
         parameters['uploads'] = FileManager.file_paths_to_dict(resume, plain_text_resume_file)
         parameters['outputFileDirectory'] = output_folder
-        parameters['collectMode'] = collect
+        parameters['collectMode'] = mode == 'discover'
+        parameters.update(database_path=database, retry_failed=retry_failed,
+                          include_deferred=include_deferred, retry_interrupted=retry_interrupted,
+                          job_ids=job_ids)
         
         create_and_run_bot(parameters, llm_api_key)
     except ConfigError as ce:

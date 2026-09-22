@@ -1,5 +1,10 @@
 # Manual approval before submission
 
+Applications now run from the SQLite inventory; see [job database](job_database.md).
+Approval decisions are committed to SQLite before the final click. Deferred and
+aborted applications use processing state `deferred`, while retaining their
+distinct application outcomes and approval decisions.
+
 `manual_approval_before_submit: true` is the default, including for existing
 config files that omit the setting. Only the YAML boolean `false` disables the
 gate and restores automatic submission. Other types are rejected.

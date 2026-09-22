@@ -26,7 +26,8 @@ from loguru import logger
 
 class AIHawkEasyApplier:
     def __init__(self, driver: Any, resume_dir: Optional[str], set_old_answers: List[Tuple[str, str, str]],
-                 gpt_answerer: Any, resume_generator_manager, manual_approval_before_submit=True):
+                 gpt_answerer: Any, resume_generator_manager, manual_approval_before_submit=True,
+                 approval_callback=None, submitted_callback=None):
         logger.debug("Initializing AIHawkEasyApplier")
         if resume_dir is None or not os.path.exists(resume_dir):
             resume_dir = None
@@ -40,6 +41,8 @@ class AIHawkEasyApplier:
         if type(manual_approval_before_submit) is not bool:
             raise ValueError("manual_approval_before_submit must be a boolean")
         self.manual_approval_before_submit = manual_approval_before_submit
+        self.approval_callback = approval_callback
+        self.submitted_callback = submitted_callback
 
         logger.debug("AIHawkEasyApplier initialized successfully")
 
@@ -348,6 +351,11 @@ class AIHawkEasyApplier:
                 "timestamp": datetime.now(timezone.utc).isoformat(),
                 "manual_approval_before_submit": self.manual_approval_before_submit,
             }
+            self.current_job.application_status = {
+                "approve": "approved", "auto_submit": "approved", "skip": "skipped_by_user",
+                "defer": "deferred_for_review", "abort": "aborted"}[decision]
+            if self.approval_callback:
+                self.approval_callback(self.current_job)
             if decision in {"skip", "defer", "abort"}:
                 status = {"skip": "skipped_by_user", "defer": "deferred_for_review",
                           "abort": "aborted"}[decision]
@@ -358,8 +366,10 @@ class AIHawkEasyApplier:
             self._unfollow_company()
             time.sleep(random.uniform(1.5, 2.5))
             next_button.click()
-            time.sleep(random.uniform(1.5, 2.5))
             self.current_job.application_status = "submitted"
+            if self.submitted_callback:
+                self.submitted_callback(self.current_job)
+            time.sleep(random.uniform(1.5, 2.5))
             return "submitted"
         time.sleep(random.uniform(1.5, 2.5))
         next_button.click()

@@ -5,13 +5,12 @@ import time
 from itertools import product
 from pathlib import Path
 
-from inputimeout import inputimeout, TimeoutOccurred
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.by import By
 
 import src.utils as utils
-from app_config import MINIMUM_WAIT_TIME
 from src.job import Job
+from src.job_store import JobStore, PENDING
 from src.aihawk_easy_applier import AIHawkEasyApplier
 from loguru import logger
 import urllib.parse
@@ -44,6 +43,12 @@ class AIHawkJobManager:
         self.set_old_answers = set()
         self.easy_applier_component = None
         self.manual_approval_before_submit = True
+        self.job_store = None
+        self.database_path = Path("data_folder/output/jobs.sqlite3")
+        self.retry_failed = False
+        self.include_deferred = False
+        self.retry_interrupted = False
+        self.selected_job_ids = ()
         logger.debug("AIHawkJobManager initialized successfully")
 
     def set_parameters(self, parameters):
@@ -67,6 +72,11 @@ class AIHawkJobManager:
         resume_path = parameters.get('uploads', {}).get('resume', None)
         self.resume_path = Path(resume_path) if resume_path and Path(resume_path).exists() else None
         self.output_file_directory = Path(parameters['outputFileDirectory'])
+        self.database_path = Path(parameters.get('database_path') or self.output_file_directory / 'jobs.sqlite3')
+        self.retry_failed = parameters.get('retry_failed', False)
+        self.include_deferred = parameters.get('include_deferred', False)
+        self.retry_interrupted = parameters.get('retry_interrupted', False)
+        self.selected_job_ids = parameters.get('job_ids', ())
         self.env_config = EnvironmentKeys()
         logger.debug("Parameters set successfully")
 
@@ -110,8 +120,8 @@ class AIHawkJobManager:
                         utils.printyellow(f"Sleeping for {sleep_time / 60} minutes.")
                         time.sleep(sleep_time)
                         page_sleep += 1
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.info(f"Discovery search ended: {exc}")
             time_left = minimum_page_time - time.time()
             if time_left > 0:
                 utils.printyellow(f"Sleeping for {time_left} seconds.")
@@ -123,117 +133,40 @@ class AIHawkJobManager:
                 time.sleep(sleep_time)
                 page_sleep += 1
 
+    def _store(self):
+        if self.job_store is None:
+            self.job_store = JobStore(self.database_path)
+        return self.job_store
+
+    def _candidate(self):
+        profile = getattr(getattr(self, "gpt_answerer", None), "job_application_profile", None)
+        return getattr(profile, "candidate_eligibility", None)
+
     def start_applying(self):
-        logger.debug("Starting job application process")
-        self.easy_applier_component = AIHawkEasyApplier(self.driver, self.resume_path, self.set_old_answers,
-                                                          self.gpt_answerer, self.resume_generator_manager,
-                                                          self.manual_approval_before_submit)
-        searches = list(product(self.positions, self.locations))
-        random.shuffle(searches)
-        page_sleep = 0
-        minimum_time = MINIMUM_WAIT_TIME
-        minimum_page_time = time.time() + minimum_time
+        """Apply only to the stored inventory; never run a search here."""
+        self.easy_applier_component = AIHawkEasyApplier(
+            self.driver, self.resume_path, self.set_old_answers,
+            self.gpt_answerer, self.resume_generator_manager,
+            self.manual_approval_before_submit,
+            approval_callback=self._persist_approval,
+            submitted_callback=self._persist_submission)
+        return self.apply_jobs()
 
-        for position, location in searches:
-            location_url = "&location=" + location
-            job_page_number = -1
-            logger.debug(f"Starting the search for {position} in {location}.")
+    def _persist_approval(self, job):
+        decision = job.approval["decision"]
+        state = {"approve": "approved", "auto_submit": "approved", "skip": "skipped",
+                 "defer": "deferred", "abort": "deferred"}[decision]
+        self._store().transition(job, state)
 
-            try:
-                while True:
-                    page_sleep += 1
-                    job_page_number += 1
-                    logger.debug(f"Going to job page {job_page_number}")
-                    self.next_job_page(position, location_url, job_page_number)
-                    time.sleep(random.uniform(1.5, 3.5))
-                    logger.debug("Starting the application process for this page...")
+    def _persist_submission(self, job):
+        self._store().transition(job, "submitted")
 
-                    try:
-                        jobs = self.get_jobs_from_page()
-                        if not jobs:
-                            logger.debug("No more jobs found on this page. Exiting loop.")
-                            break
-                    except Exception as e:
-                        logger.error(f"Failed to retrieve jobs: {e}")
-                        break
-
-                    try:
-                        if self.apply_jobs() == "aborted":
-                            logger.info("Application run stopped by user.")
-                            return "aborted"
-                    except Exception as e:
-                        logger.error(f"Error during job application: {e}")
-                        continue
-
-                    logger.debug("Applying to jobs on this page has been completed!")
-
-                    time_left = minimum_page_time - time.time()
-
-                    # Ask user if they want to skip waiting, with timeout
-                    if time_left > 0:
-                        try:
-                            user_input = inputimeout(
-                                prompt=f"Sleeping for {time_left} seconds. Press 'y' to skip waiting. Timeout 60 seconds : ",
-                                timeout=60).strip().lower()
-                        except TimeoutOccurred:
-                            user_input = ''  # No input after timeout
-                        if user_input == 'y':
-                            logger.debug("User chose to skip waiting.")
-                        else:
-                            logger.debug(f"Sleeping for {time_left} seconds as user chose not to skip.")
-                            time.sleep(time_left)
-
-                    minimum_page_time = time.time() + minimum_time
-
-                    if page_sleep % 5 == 0:
-                        sleep_time = random.randint(5, 34)
-                        try:
-                            user_input = inputimeout(
-                                prompt=f"Sleeping for {sleep_time / 60} minutes. Press 'y' to skip waiting. Timeout 60 seconds : ",
-                                timeout=60).strip().lower()
-                        except TimeoutOccurred:
-                            user_input = ''  # No input after timeout
-                        if user_input == 'y':
-                            logger.debug("User chose to skip waiting.")
-                        else:
-                            logger.debug(f"Sleeping for {sleep_time} seconds.")
-                            time.sleep(sleep_time)
-                        page_sleep += 1
-            except Exception as e:
-                logger.error(f"Unexpected error during job search: {e}")
-                continue
-
-            time_left = minimum_page_time - time.time()
-
-            if time_left > 0:
-                try:
-                    user_input = inputimeout(
-                        prompt=f"Sleeping for {time_left} seconds. Press 'y' to skip waiting. Timeout 60 seconds : ",
-                        timeout=60).strip().lower()
-                except TimeoutOccurred:
-                    user_input = ''  # No input after timeout
-                if user_input == 'y':
-                    logger.debug("User chose to skip waiting.")
-                else:
-                    logger.debug(f"Sleeping for {time_left} seconds as user chose not to skip.")
-                    time.sleep(time_left)
-
-            minimum_page_time = time.time() + minimum_time
-
-            if page_sleep % 5 == 0:
-                sleep_time = random.randint(50, 90)
-                try:
-                    user_input = inputimeout(
-                        prompt=f"Sleeping for {sleep_time / 60} minutes. Press 'y' to skip waiting: ",
-                        timeout=60).strip().lower()
-                except TimeoutOccurred:
-                    user_input = ''  # No input after timeout
-                if user_input == 'y':
-                    logger.debug("User chose to skip waiting.")
-                else:
-                    logger.debug(f"Sleeping for {sleep_time} seconds.")
-                    time.sleep(sleep_time)
-                page_sleep += 1
+    def _export_result(self, job, name):
+        # JSON is a compatibility export. A failed export cannot undo DB state.
+        try:
+            self.write_to_file(job, name)
+        except Exception as exc:
+            logger.warning(f"SQLite saved; JSON export failed for {job.job_id}: {exc}")
 
     def get_jobs_from_page(self):
 
@@ -269,136 +202,91 @@ class AIHawkJobManager:
             return []
 
     def read_jobs(self):
-        try:
-            no_jobs_element = self.driver.find_element(By.CLASS_NAME, 'jobs-search-two-pane__no-results-banner--expand')
-            if 'No matching jobs found' in no_jobs_element.text or 'unfortunately, things aren' in self.driver.page_source.lower():
-                raise Exception("No more jobs on this page")
-        except NoSuchElementException:
-            pass
-        
-        job_results = self.driver.find_element(By.CLASS_NAME, "jobs-search-results-list")
-        utils.scroll_slow(self.driver, job_results)
-        utils.scroll_slow(self.driver, job_results, step=300, reverse=True)
-        job_list_elements = self.driver.find_elements(By.CLASS_NAME, 'scaffold-layout__list-container')[0].find_elements(By.CLASS_NAME, 'jobs-search-results__list-item')
-        if not job_list_elements:
-            raise Exception("No job class elements found on page")
-        job_list = [Job(*self.extract_job_information_from_tile(job_element)) for job_element in job_list_elements] 
-        for job in job_list:            
-            if self.is_blacklisted(job.title, job.company, job.link, job.location):
-                utils.printyellow(f"Blacklisted {job.title} at {job.company} in {job.location}, skipping...")
-                self.write_to_file(job, "skipped")
-                continue
+        tiles = self.get_jobs_from_page()
+        if not tiles:
+            raise RuntimeError("No more jobs on this page")
+        # Extract tiles before navigating, so Selenium elements cannot become stale.
+        jobs = [Job(*self.extract_job_information_from_tile(tile)) for tile in tiles]
+        search_url = self.driver.current_url
+        reader = AIHawkEasyApplier(self.driver, None, [], None, None)
+        for job in jobs:
+            store = self._store()
+            row = store.upsert(job)
+            job = store.to_job(row)
             try:
-                self.write_to_file(job,'data')
-            except Exception as e:
-                self.write_to_file(job, "failed")
-                continue
+                if job.link:
+                    self.driver.get(job.link)
+                    time.sleep(random.uniform(1.5, 3.5))
+                    description = reader._get_job_description()
+                    if description:
+                        job.description = description
+            except Exception as exc:
+                logger.warning(f"Description unavailable for {job.link}: {exc}")
+            job.evaluate_eligibility(self._candidate())
+            store.evaluate(job)
+            if (store.get(job.job_id)["state"] in PENDING and
+                    self.is_blacklisted(job.title, job.company, job.link, job.location)):
+                job.application_status = "skipped"
+                store.transition(job, "skipped")
+                self._export_result(job, "skipped")
+            else:
+                self._export_result(job, "data")
+        self.driver.get(search_url)
 
     def apply_jobs(self):
-        try:
-            no_jobs_element = self.driver.find_element(By.CLASS_NAME, 'jobs-search-two-pane__no-results-banner--expand')
-            if 'No matching jobs found' in no_jobs_element.text or 'unfortunately, things aren' in self.driver.page_source.lower():
-                logger.debug("No matching jobs found on this page, skipping")
-                return
-        except NoSuchElementException:
-            pass
-
-        job_list_elements = self.driver.find_elements(By.CLASS_NAME, 'scaffold-layout__list-container')[
-            0].find_elements(By.CLASS_NAME, 'jobs-search-results__list-item')
-
-        if not job_list_elements:
-            logger.debug("No job class elements found on page, skipping")
-            return
-
-        job_list = [Job(*self.extract_job_information_from_tile(job_element)) for job_element in job_list_elements]
-
-        for job in job_list:
-
-            logger.debug(f"Starting applicant for job: {job.title} at {job.company}")
-            #TODO fix apply threshold
-            """
-                # Initialize applicants_count as None
-                applicants_count = None
-
-                # Iterate over each job insight element to find the one containing the word "applicant"
-                for element in job_insight_elements:
-                    logger.debug(f"Checking element text: {element.text}")
-                    if "applicant" in element.text.lower():
-                        # Found an element containing "applicant"
-                        applicants_text = element.text.strip()
-                        logger.debug(f"Applicants text found: {applicants_text}")
-
-                        # Extract numeric digits from the text (e.g., "70 applicants" -> "70")
-                        applicants_count = ''.join(filter(str.isdigit, applicants_text))
-                        logger.debug(f"Extracted applicants count: {applicants_count}")
-
-                        if applicants_count:
-                            if "over" in applicants_text.lower():
-                                applicants_count = int(applicants_count) + 1  # Handle "over X applicants"
-                                logger.debug(f"Applicants count adjusted for 'over': {applicants_count}")
-                            else:
-                                applicants_count = int(applicants_count)  # Convert the extracted number to an integer
-                        break
-
-                # Check if applicants_count is valid (not None) before performing comparisons
-                if applicants_count is not None:
-                    # Perform the threshold check for applicants count
-                    if applicants_count < self.min_applicants or applicants_count > self.max_applicants:
-                        logger.debug(f"Skipping {job.title} at {job.company}, applicants count: {applicants_count}")
-                        self.write_to_file(job, "skipped_due_to_applicants")
-                        continue  # Skip this job if applicants count is outside the threshold
-                    else:
-                        logger.debug(f"Applicants count {applicants_count} is within the threshold")
-                else:
-                    # If no applicants count was found, log a warning but continue the process
-                    logger.warning(
-                        f"Applicants count not found for {job.title} at {job.company}, continuing with application.")
-            except NoSuchElementException:
-                # Log a warning if the job insight elements are not found, but do not stop the job application process
-                logger.warning(
-                    f"Applicants count elements not found for {job.title} at {job.company}, continuing with application.")
-            except ValueError as e:
-                # Handle errors when parsing the applicants count
-                logger.error(f"Error parsing applicants count for {job.title} at {job.company}: {e}")
-            except Exception as e:
-                # Catch any other exceptions to ensure the process continues
-                logger.error(
-                    f"Unexpected error during applicants count processing for {job.title} at {job.company}: {e}")
-
-            # Continue with the job application process regardless of the applicants count check
-            """
-        
-
-            if self.is_previously_failed_to_apply(job.link):
-                logger.debug(f"Previously failed to apply for {job.title} at {job.company}, skipping...")
-                self.write_to_file(job, "skipped")
+        store = self._store()
+        states = list(PENDING)
+        if self.retry_failed:
+            states.append("failed")
+        if self.include_deferred:
+            states.append("deferred")
+        if self.retry_interrupted:
+            states.extend(["applying", "approved"])
+        for row in store.list_jobs(states, self.selected_job_ids):
+            job = store.to_job(row)
+            job.evaluate_eligibility(self._candidate())
+            store.evaluate(job)
+            if (self.is_blacklisted(job.title, job.company, job.link, job.location) or
+                    (self.apply_once_at_company and store.has_submitted_company(job.company)) or
+                    job.apply_method in {"Continue", "Applied", "Apply"}):
+                # Preserve existing non-eligibility application restrictions.
+                if row["state"] in PENDING:
+                    job.application_status = "skipped"
+                    store.transition(job, "skipped")
+                    self._export_result(job, "skipped")
                 continue
-            if self.is_blacklisted(job.title, job.company, job.link, job.location):
-                logger.debug(f"Job blacklisted: {job.title} at {job.company} in {job.location}")
-                self.write_to_file(job, "skipped")
-                continue
-            if self.is_already_applied_to_job(job.title, job.company, job.link):
-                self.write_to_file(job, "skipped")
-                continue
-            if self.is_already_applied_to_company(job.company):
-                self.write_to_file(job, "skipped")
+            job.approval = None
+            job.application_answers = []
+            job.application_status = "applying"
+            try:
+                # Atomic claim prevents two processes from applying the same pending job.
+                store.transition(job, "applying", retry=row["state"] not in PENDING,
+                                 expected_state=store.get(job.job_id)["state"] if row["state"] in PENDING else row["state"])
+            except ValueError:
+                logger.info(f"Job {job.job_id} was already claimed; leaving it alone")
                 continue
             try:
-                if job.apply_method not in {"Continue", "Applied", "Apply"}:
-                    status = self.easy_applier_component.job_apply(job)
-                    if status not in {"submitted", "skipped_by_user", "deferred_for_review", "aborted"}:
-                        raise ValueError(f"Unexpected application status: {status}")
-                    job.application_status = status
-                    self.write_to_file(job, "success" if status == "submitted" else status)
-                    if status == "aborted":
-                        return status
-                else:
-                    self.write_to_file(job, "skipped")
-            except Exception as e:
-                logger.error(f"Failed to apply for {job.title} at {job.company}: {e}")
+                status = self.easy_applier_component.job_apply(job)
+                if status not in {"submitted", "skipped_by_user", "deferred_for_review", "aborted"}:
+                    raise ValueError(f"Unexpected application status: {status}")
+                job.application_status = status
+                state = {"submitted": "submitted", "skipped_by_user": "skipped",
+                         "deferred_for_review": "deferred", "aborted": "deferred"}[status]
+                if store.get(job.job_id)["state"] != state:
+                    store.transition(job, state)
+                self._export_result(job, "success" if status == "submitted" else status)
+                if status == "aborted":
+                    return "aborted"
+            except Exception as exc:
+                if job.application_status == "submitted":
+                    logger.error(f"Submission clicked for {job.job_id}; check its database state before retrying: {exc}")
+                    continue
                 job.application_status = "failed"
-                self.write_to_file(job, "failed")
-                continue
+                # A confirmed click remains submitted even if a later browser operation fails.
+                if store.get(job.job_id)["state"] in {"applying", "approved"}:
+                    store.transition(job, "failed", failure_reason=str(exc))
+                    self._export_result(job, "failed")
+                logger.error(f"Application error for {job.job_id}: {exc}")
 
     def write_to_file(self, job, file_name):
         logger.debug(f"Writing job application result to file: {file_name}")
@@ -408,6 +296,9 @@ class AIHawkJobManager:
         pdf_path = Path(job.pdf_path).resolve()
         pdf_path = pdf_path.as_uri()
         data = {
+            "job_id": job.job_id,
+            "description": job.description,
+            "apply_method": job.apply_method,
             "company": job.company,
             "job_title": job.title,
             "link": job.link,
@@ -420,7 +311,12 @@ class AIHawkJobManager:
             "cover_letter_path": job.cover_letter_path,
             "application_answers": job.application_answers
         }
+        if self.job_store is not None and job.job_id:
+            row = self.job_store.get(job.job_id)
+            data.update(state=row['state'], submitted_at=row['submitted_at'],
+                        failure_reason=row['failure_reason'])
         file_path = self.output_file_directory / f"{file_name}.json"
+        self.output_file_directory.mkdir(parents=True, exist_ok=True)
         if not file_path.exists():
             with open(file_path, 'w', encoding='utf-8') as f:
                 json.dump([data], f, indent=4)
@@ -505,51 +401,3 @@ class AIHawkJobManager:
         logger.debug(f"Job blacklisted status: {is_blacklisted}")
 
         return title_blacklisted or company_blacklisted or location_blacklisted or link_seen
-
-    def is_already_applied_to_job(self, job_title, company, link):
-        link_seen = link in self.seen_jobs
-        if link_seen:
-            logger.debug(f"Already applied to job: {job_title} at {company}, skipping...")
-        return link_seen
-
-    def is_already_applied_to_company(self, company):
-        if not self.apply_once_at_company:
-            return False
-
-        output_files = ["success.json"]
-        for file_name in output_files:
-            file_path = self.output_file_directory / file_name
-            if file_path.exists():
-                with open(file_path, 'r', encoding='utf-8') as f:
-                    try:
-                        existing_data = json.load(f)
-                        for applied_job in existing_data:
-                            if applied_job['company'].strip().lower() == company.strip().lower():
-                                logger.debug(
-                                    f"Already applied at {company} (once per company policy), skipping...")
-                                return True
-                    except json.JSONDecodeError:
-                        continue
-        return False
-
-    def is_previously_failed_to_apply(self, link):
-        file_name = "failed"
-        file_path = self.output_file_directory / f"{file_name}.json"
-
-        if not file_path.exists():
-            with open(file_path, "w", encoding="utf-8") as f:
-                json.dump([], f)
-                
-        with open(file_path, 'r', encoding='utf-8') as f:
-            try:
-                existing_data = json.load(f)
-            except json.JSONDecodeError:
-                logger.error(f"JSON decode error in file: {file_path}")
-                return False
-            
-        for data in existing_data:
-            data_link = data['link']
-            if data_link == link:
-                return True
-                
-        return False

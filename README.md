@@ -578,6 +578,19 @@ Using this folder as a guide can be particularly helpful for:
 
 3. **Run the Bot:**
 
+   Discover jobs into the local SQLite inventory, then review and apply separately:
+
+   ```bash
+   python main.py --mode discover
+   python main.py --mode pending
+   python main.py --mode apply
+   ```
+
+   Applications use stored jobs and require manual approval before submission by
+   default. If you already have JSON application history, first run
+   `python main.py --mode import-json`. See [the job database guide](docs/job_database.md)
+   for schema, migration, retry options, and state handling.
+
    Auto_Jobs_Applier_AIHawk offers flexibility in how it handles your pdf resume:
 
 - **Dynamic Resume Generation:**
@@ -594,8 +607,10 @@ Using this folder as a guide can be particularly helpful for:
   python main.py --resume /path/to/your/resume.pdf
   ```
 
-- **Using the colled mode:**
-  If you want to collect job data only to perform any type of data analytics you can use the bot with the `--collect` option. This will store in output/data.json file all data found from linkedin jobs offers.
+- **Using collection mode:**
+  `--collect` is an alias for discovery. It stores jobs, full descriptions, and
+  eligibility reviews in `data_folder/output/jobs.sqlite3`, with a compatible
+  `data.json` export. It does not open application forms.
 
   ```bash
   python main.py --collect

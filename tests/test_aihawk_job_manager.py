@@ -9,10 +9,16 @@ from loguru import logger
 
 
 @pytest.fixture
-def job_manager(mocker):
+def job_manager(mocker, tmp_path):
     """Fixture to create a AIHawkJobManager instance with mocked driver."""
     mock_driver = mocker.Mock()
-    return AIHawkJobManager(mock_driver)
+    manager = AIHawkJobManager(mock_driver)
+    manager.database_path = tmp_path / "jobs.sqlite3"
+    manager.output_file_directory = tmp_path
+    manager.company_blacklist = manager.title_blacklist = manager.location_blacklist = []
+    manager.seen_jobs = []
+    manager.apply_once_at_company = False
+    return manager
 
 
 def test_initialization(job_manager):
@@ -86,84 +92,18 @@ def test_get_jobs_from_page_with_jobs(mocker, job_manager):
     assert jobs == []  # No jobs expected due to "No matching jobs found"
 
 
-def test_apply_jobs_with_no_jobs(mocker, job_manager):
-    """Test apply_jobs when no jobs are found."""
-    # Mocking find_element to return a mock element that simulates no jobs
-    mock_element = mocker.Mock()
-    mock_element.text = "No matching jobs found"
-
-    # Mock the driver to simulate the page source
-    mocker.patch.object(job_manager.driver, 'page_source', return_value="")
-
-    # Mock the driver to return the mock element when find_element is called
-    mocker.patch.object(job_manager.driver, 'find_element',
-                        return_value=mock_element)
-
-    # Call apply_jobs and ensure no exceptions are raised
+def test_apply_jobs_with_no_jobs(job_manager):
     job_manager.apply_jobs()
+    job_manager.driver.find_element.assert_not_called()
+    job_manager.driver.find_elements.assert_not_called()
 
-    # Ensure it attempted to find the job results list
-    assert job_manager.driver.find_element.call_count == 1
 
-
-def test_apply_jobs_with_jobs(mocker, job_manager):
-    """Test apply_jobs when jobs are present."""
-
-    # Mock no_jobs_element to simulate the absence of "No matching jobs found" banner
-    no_jobs_element = mocker.Mock()
-    no_jobs_element.text = ""  # Empty text means "No matching jobs found" is not present
-    mocker.patch.object(job_manager.driver, 'find_element',
-                        return_value=no_jobs_element)
-
-    # Mock the page_source to simulate what the page looks like when jobs are present
-    mocker.patch.object(job_manager.driver, 'page_source',
-                        return_value="some job content")
-
-    # Mock the outer find_elements (scaffold-layout__list-container)
-    container_mock = mocker.Mock()
-
-    # Mock the inner find_elements to return job list items
-    job_element_mock = mocker.Mock()
-    # Simulating two job items
-    job_elements_list = [job_element_mock, job_element_mock]
-
-    # Return the container mock, which itself returns the job elements list
-    container_mock.find_elements.return_value = job_elements_list
-    mocker.patch.object(job_manager.driver, 'find_elements',
-                        return_value=[container_mock])
-
-    # Mock the extract_job_information_from_tile method to return sample job info
-    mocker.patch.object(job_manager, 'extract_job_information_from_tile', return_value=(
-        "Title", "Company", "Location", "Apply", "Link"))
-
-    # Mock other methods like is_blacklisted, is_already_applied_to_job, and is_already_applied_to_company
-    mocker.patch.object(job_manager, 'is_blacklisted', return_value=False)
-    mocker.patch.object(
-        job_manager, 'is_already_applied_to_job', return_value=False)
-    mocker.patch.object(
-        job_manager, 'is_already_applied_to_company', return_value=False)
-
-    # Mock the AIHawkEasyApplier component
-    job_manager.easy_applier_component = mocker.Mock()
+def test_apply_jobs_with_jobs(job_manager):
+    job = Job("Title", "Company", "Location", "https://www.linkedin.com/jobs/view/123", "Easy Apply")
+    job_manager._store().upsert(job)
+    job_manager.easy_applier_component = mock.Mock()
     job_manager.easy_applier_component.job_apply.return_value = "submitted"
-
-    # Mock the output_file_directory as a valid Path object
-    job_manager.output_file_directory = Path("/mocked/path/to/output")
-
-    # Mock Path.exists() to always return True (so no actual file system interaction is needed)
-    mocker.patch.object(Path, 'exists', return_value=True)
-
-    # Mock the open function to prevent actual file writing
-    mock_open = mocker.mock_open()
-    mocker.patch('builtins.open', mock_open)
-
-    # Run the apply_jobs method
     job_manager.apply_jobs()
-
-    # Assertions
-    assert job_manager.driver.find_elements.call_count == 1
-    # Called for each job element
-    assert job_manager.extract_job_information_from_tile.call_count == 2
-    # Called for each job element
-    assert job_manager.easy_applier_component.job_apply.call_count == 2
-    mock_open.assert_called()  # Ensure that the open function was called
+    job_manager.driver.find_elements.assert_not_called()
+    job_manager.easy_applier_component.job_apply.assert_called_once()
+    assert job_manager._store().get(job.job_id)["state"] == "submitted"

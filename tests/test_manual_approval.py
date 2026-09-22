@@ -89,12 +89,15 @@ def test_review_contains_files_eligibility_and_used_answers(applier, monkeypatch
 def test_manager_routes_and_persists_outcome(applier, monkeypatch, tmp_path, decision, status, filename):
     manager = AIHawkJobManager(Mock())
     manager.output_file_directory = tmp_path
-    manager.driver.find_element.side_effect = NoSuchElementException
-    manager.driver.find_elements.return_value = [Mock()]
-    manager.driver.find_elements.return_value[0].find_elements.return_value = [Mock(), Mock()]
-    manager.extract_job_information_from_tile = Mock(return_value=("Engineer", "Example", "Remote", "url", "Easy Apply"))
-    for name in ("is_previously_failed_to_apply", "is_blacklisted", "is_already_applied_to_job", "is_already_applied_to_company"):
-        setattr(manager, name, Mock(return_value=False))
+    manager.database_path = tmp_path / "jobs.sqlite3"
+    manager.apply_once_at_company = False
+    manager.company_blacklist = manager.title_blacklist = manager.location_blacklist = []
+    manager.seen_jobs = []
+    for job_id in (123, 456):
+        manager._store().upsert(Job("Engineer", "Example", "Remote",
+                                   f"https://www.linkedin.com/jobs/view/{job_id}", "Easy Apply"))
+    applier.approval_callback = manager._persist_approval
+    applier.submitted_callback = manager._persist_submission
     monkeypatch.setattr("builtins.input", lambda _: decision)
 
     def apply(job):
@@ -113,7 +116,7 @@ def test_manager_routes_and_persists_outcome(applier, monkeypatch, tmp_path, dec
 
 
 @pytest.mark.parametrize("enabled", [True, False])
-def test_abort_exits_outer_search_loop(monkeypatch, enabled):
+def test_abort_returns_without_searching(monkeypatch, enabled):
     manager = AIHawkJobManager(Mock())
     manager.resume_path = None
     manager.manual_approval_before_submit = enabled
@@ -128,7 +131,7 @@ def test_abort_exits_outer_search_loop(monkeypatch, enabled):
     monkeypatch.setattr("src.aihawk_job_manager.time.sleep", lambda _: None)
     assert manager.start_applying() == "aborted"
     manager.apply_jobs.assert_called_once()
-    manager.next_job_page.assert_called_once()
+    manager.next_job_page.assert_not_called()
     assert constructor.call_args.args[-1] is enabled
 
 
@@ -222,3 +225,11 @@ def test_uploaded_existing_resume_path_is_recorded(applier, tmp_path):
     applier._handle_upload_fields(Mock(), applier.current_job)
     upload.send_keys.assert_called_once_with(str(resume.resolve()))
     assert applier.current_job.pdf_path == str(resume.resolve())
+
+
+def test_failed_approval_persistence_prevents_submit(applier, monkeypatch):
+    monkeypatch.setattr("builtins.input", lambda _: "approve")
+    applier.approval_callback = Mock(side_effect=OSError("Database unavailable"))
+    with pytest.raises(OSError, match="Database unavailable"):
+        applier._next_or_submit()
+    applier.driver.find_element.return_value.click.assert_not_called()

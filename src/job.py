@@ -23,6 +23,9 @@ class Job:
     application_status: Optional[str] = None
     approval: Optional[dict] = None
     application_answers: list = field(default_factory=list)
+    job_id: Optional[str] = None
+    linkedin_job_id: Optional[str] = None
+    source: str = "linkedin"
 
     def evaluate_eligibility(self, candidate_eligibility=None):
         """Attach advisory metadata only; never decide whether to apply."""

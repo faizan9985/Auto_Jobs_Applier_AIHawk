@@ -8,8 +8,8 @@ opening the form. Eligibility never changes filtering or final submission.
 
 The shared output writer persists an `eligibility` block in success, failed,
 skipped, and collected (`data`) records. Jobs without a review are evaluated
-using any description already available. Collection does not fetch additional
-descriptions. Missing descriptions or candidate profiles produce `needs_review`
+using any description already available. Discovery now fetches full descriptions
+and stores evaluations in SQLite as well as JSON. Missing descriptions or candidate profiles produce `needs_review`
 with unknown dimension statuses. Description retrieval errors are logged and
 the application flow continues with the available job information.
 
