@@ -1,8 +1,17 @@
-# Standalone job eligibility evaluation
+# Review-only job eligibility evaluation
 
 `JobEligibilityEvaluator.evaluate(description: str, candidate: CandidateEligibility)`
-returns an `EligibilityResult` dataclass. It performs no I/O or LLM calls and is
-not imported by application, answer-generation, skipping, or submission code.
+returns an `EligibilityResult` dataclass. It performs no I/O or LLM calls.
+The Easy Apply flow retrieves the description when missing, attaches a review
+to `Job.eligibility`, and logs its status, sponsorship status, and reasons before
+opening the form. Eligibility never changes filtering or final submission.
+
+The shared output writer persists an `eligibility` block in success, failed,
+skipped, and collected (`data`) records. Jobs without a review are evaluated
+using any description already available. Collection does not fetch additional
+descriptions. Missing descriptions or candidate profiles produce `needs_review`
+with unknown dimension statuses. Description retrieval errors are logged and
+the application flow continues with the available job information.
 
 ```python
 from dataclasses import asdict

@@ -364,6 +364,7 @@ class AIHawkJobManager:
 
             if self.is_previously_failed_to_apply(job.link):
                 logger.debug(f"Previously failed to apply for {job.title} at {job.company}, skipping...")
+                self.write_to_file(job, "skipped")
                 continue
             if self.is_blacklisted(job.title, job.company, job.link, job.location):
                 logger.debug(f"Job blacklisted: {job.title} at {job.company} in {job.location}")
@@ -380,6 +381,8 @@ class AIHawkJobManager:
                     self.easy_applier_component.job_apply(job)
                     self.write_to_file(job, "success")
                     logger.debug(f"Applied to job: {job.title} at {job.company}")
+                else:
+                    self.write_to_file(job, "skipped")
             except Exception as e:
                 logger.error(f"Failed to apply for {job.title} at {job.company}: {e}")
                 self.write_to_file(job, "failed")
@@ -387,6 +390,9 @@ class AIHawkJobManager:
 
     def write_to_file(self, job, file_name):
         logger.debug(f"Writing job application result to file: {file_name}")
+        if job.eligibility is None:
+            profile = getattr(getattr(self, "gpt_answerer", None), "job_application_profile", None)
+            job.evaluate_eligibility(getattr(profile, "candidate_eligibility", None))
         pdf_path = Path(job.pdf_path).resolve()
         pdf_path = pdf_path.as_uri()
         data = {
@@ -395,7 +401,8 @@ class AIHawkJobManager:
             "link": job.link,
             "job_recruiter": job.recruiter_link,
             "job_location": job.location,
-            "pdf_path": pdf_path
+            "pdf_path": pdf_path,
+            "eligibility": job.eligibility
         }
         file_path = self.output_file_directory / f"{file_name}.json"
         if not file_path.exists():

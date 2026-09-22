@@ -114,14 +114,20 @@ class AIHawkEasyApplier:
 
             self.check_for_premium_redirect(job)
 
+            if not job.description or not job.description.strip():
+                try:
+                    job.set_job_description(self._get_job_description())
+                except Exception as exc:
+                    logger.warning(f"Job description unavailable for eligibility review: {exc}")
+            profile = getattr(self.gpt_answerer, "job_application_profile", None)
+            eligibility = job.evaluate_eligibility(getattr(profile, "candidate_eligibility", None))
+            logger.info("Eligibility: {} | Sponsorship: {} | Reasons: {}",
+                        eligibility["status"], eligibility["sponsorship_status"],
+                        "; ".join(eligibility["reasons"]))
+
             easy_apply_button = self._find_easy_apply_button(job)
 
             self.check_for_premium_redirect(job)
-
-            logger.debug("Retrieving job description")
-            job_description = self._get_job_description()
-            job.set_job_description(job_description)
-            logger.debug(f"Job description set: {job_description[:100]}")
 
             logger.debug("Retrieving recruiter link")
             recruiter_link = self._get_job_recruiter()

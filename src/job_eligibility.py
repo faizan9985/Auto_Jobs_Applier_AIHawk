@@ -1,6 +1,6 @@
 """Conservative, offline screening of explicit English job requirements.
 
-This module is deliberately not connected to application/submission code.
+Application code uses these results as review-only metadata, never as a gate.
 Eligible means the recognized requirements match the supplied facts, not a
 legal determination. Unsupported or conditional eligibility language needs
 human review. No immigration rules are derived from visa names or OPT flags.

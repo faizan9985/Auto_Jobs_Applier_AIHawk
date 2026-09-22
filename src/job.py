@@ -1,4 +1,8 @@
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
+from typing import Optional
+
+from src.job_application_profile import CandidateEligibility
+from src.job_eligibility import EligibilityResult, JobEligibilityEvaluator
 
 from loguru import logger
 
@@ -14,6 +18,19 @@ class Job:
     summarize_job_description: str = ""
     pdf_path: str = ""
     recruiter_link: str = ""
+    eligibility: Optional[dict] = None
+
+    def evaluate_eligibility(self, candidate_eligibility=None):
+        """Attach advisory metadata only; never decide whether to apply."""
+        reasons = []
+        if not isinstance(self.description, str) or not self.description.strip():
+            reasons.append("Job description is unavailable.")
+        if not isinstance(candidate_eligibility, CandidateEligibility):
+            reasons.append("Candidate eligibility profile is unavailable.")
+        result = (EligibilityResult(reasons=reasons) if reasons else
+                  JobEligibilityEvaluator().evaluate(self.description, candidate_eligibility))
+        self.eligibility = asdict(result)
+        return self.eligibility
 
     def set_summarize_job_description(self, summarize_job_description):
         logger.debug(f"Setting summarized job description: {summarize_job_description}")
