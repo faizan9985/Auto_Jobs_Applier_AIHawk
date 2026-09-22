@@ -52,7 +52,8 @@ class AIHawkEasyApplier:
                     logger.error("JSON decoding failed")
                     data = []
             logger.debug("Questions loaded successfully from JSON")
-            return data
+            # Answers generated under older prompts may contain inflated claims.
+            return [item for item in data if item.get('answer_policy') == 'verified_only_v1']
         except FileNotFoundError:
             logger.warning("JSON file not found, returning empty list")
             return []
@@ -825,10 +826,10 @@ class AIHawkEasyApplier:
     def _select_radio(self, radios: List[WebElement], answer: str) -> None:
         logger.debug(f"Selecting radio option: {answer}")
         for radio in radios:
-            if answer in radio.text.lower():
+            if answer.strip().casefold() == radio.text.strip().casefold():
                 radio.find_element(By.TAG_NAME, 'label').click()
                 return
-        radios[-1].find_element(By.TAG_NAME, 'label').click()
+        raise ValueError("No radio option matches the supported answer")
 
     def _select_dropdown_option(self, element: WebElement, text: str) -> None:
         logger.debug(f"Selecting dropdown option: {text}")
@@ -837,6 +838,7 @@ class AIHawkEasyApplier:
 
     def _save_questions_to_json(self, question_data: dict) -> None:
         output_file = 'answers.json'
+        question_data['answer_policy'] = 'verified_only_v1'
         question_data['question'] = self._sanitize_text(question_data['question'])
 
         logger.debug(f"Saving question data to JSON: {question_data}")

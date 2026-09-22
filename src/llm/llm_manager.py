@@ -10,7 +10,6 @@ from typing import Dict, List
 from typing import Union
 
 import httpx
-from Levenshtein import distance
 from dotenv import load_dotenv
 from langchain_core.messages import BaseMessage
 from langchain_core.messages.ai import AIMessage
@@ -366,13 +365,11 @@ class GPTAnswerer:
 
     @staticmethod
     def find_best_match(text: str, options: list[str]) -> str:
-        logger.debug(f"Finding best match for text: '{text}' in options: {options}")
-        distances = [
-            (option, distance(text.lower(), option.lower())) for option in options
-        ]
-        best_option = min(distances, key=lambda x: x[1])[0]
-        logger.debug(f"Best match found: {best_option}")
-        return best_option
+        # Fuzzy matching can turn an unknown answer into a positive claim.
+        for option in options:
+            if text.strip().casefold() == option.strip().casefold():
+                return option
+        raise ValueError("No supported answer matches the available options")
 
     @staticmethod
     def _remove_placeholders(text: str) -> str:
@@ -556,7 +553,7 @@ class GPTAnswerer:
         logger.debug(f"Question answered: {output}")
         return output
 
-    def answer_question_numeric(self, question: str, default_experience: str = 3) -> str:
+    def answer_question_numeric(self, question: str) -> str:
         logger.debug(f"Answering numeric question: {question}")
         func_template = self._preprocess_template_string(
             strings.numeric_question_template)
@@ -570,20 +567,18 @@ class GPTAnswerer:
             output = self.extract_number_from_string(output_str)
             logger.debug(f"Extracted number: {output}")
         except ValueError:
-            logger.warning(
-                f"Failed to extract number, using default experience: {default_experience}")
-            output = default_experience
+            logger.warning("Numeric answer is unknown or invalid; using conservative fallback 0")
+            output = "0"
         return output
 
     def extract_number_from_string(self, output_str):
         logger.debug(f"Extracting number from string: {output_str}")
-        numbers = re.findall(r"\d+", output_str)
-        if numbers:
-            logger.debug(f"Numbers found: {numbers}")
-            return str(numbers[0])
-        else:
-            logger.error("No numbers found in the string")
-            raise ValueError("No numbers found in the string")
+        # Accept only a complete nonnegative number, not digits in speculation,
+        # ranges, dates, negative values, or explanations. Preserve fractions.
+        number = output_str.strip()
+        if re.fullmatch(r"[0-9]+(?:\.[0-9]+)?", number):
+            return number
+        raise ValueError("Expected a nonnegative numeric answer")
 
     def answer_question_from_options(self, question: str, options: list[str]) -> str:
         logger.debug(f"Answering question from options: {question}")
@@ -592,7 +587,8 @@ class GPTAnswerer:
         prompt = ChatPromptTemplate.from_template(func_template)
         chain = prompt | self.llm_cheap | StrOutputParser()
         output_str = chain.invoke(
-            {"resume": self.resume, "question": question, "options": options})
+            {"resume": self.resume, "profile": self.job_application_profile,
+             "question": question, "options": options})
         logger.debug(f"Raw output for options question: {output_str}")
         best_option = self.find_best_match(output_str, options)
         logger.debug(f"Best option determined: {best_option}")

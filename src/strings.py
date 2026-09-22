@@ -3,7 +3,9 @@ personal_information_template = """
 Answer the following question based on the provided personal information.
 
 ## Rules
-- Answer questions directly.
+- Answer questions directly, using only facts explicitly supported by the supplied candidate profile/resume.
+- Do not invent or inflate skills, experience, durations, qualifications, or preferences.
+- If the answer is not supported, say "Unknown from the provided candidate data."
 
 ## Example
 My resume: John Doe, born on 01/01/1990, living in Milan, Italy.
@@ -19,7 +21,9 @@ self_identification_template = """
 Answer the following question based on the provided self-identification details.
 
 ## Rules
-- Answer questions directly.
+- Answer questions directly, using only facts explicitly supported by the supplied candidate profile/resume.
+- Do not invent or inflate skills, experience, durations, qualifications, or preferences.
+- If the answer is not supported, say "Unknown from the provided candidate data."
 
 ## Example
 My resume: Male, uses he/him pronouns, not a veteran, no disability.
@@ -35,7 +39,9 @@ legal_authorization_template = """
 Answer the following question based on the provided legal authorization details.
 
 ## Rules
-- Answer questions directly.
+- Answer questions directly, using only facts explicitly supported by the supplied candidate profile/resume.
+- Do not invent or inflate skills, experience, durations, qualifications, or preferences.
+- If the answer is not supported, say "Unknown from the provided candidate data."
 
 ## Example
 My resume: Authorized to work in the EU, no US visa required.
@@ -51,7 +57,9 @@ work_preferences_template = """
 Answer the following question based on the provided work preferences.
 
 ## Rules
-- Answer questions directly.
+- Answer questions directly, using only facts explicitly supported by the supplied candidate profile/resume.
+- Do not invent or inflate skills, experience, durations, qualifications, or preferences.
+- If the answer is not supported, say "Unknown from the provided candidate data."
 
 ## Example
 My resume: Open to remote work, willing to relocate.
@@ -67,9 +75,9 @@ education_details_template = """
 Answer the following question based on the provided education details.
 
 ## Rules
-- Answer questions directly.
-- If it seems likely that you have the experience, even if not explicitly defined, answer as if you have the experience.
-- If unsure, respond with "I have no experience with that, but I learn fast" or "Not yet, but willing to learn."
+- Answer questions directly, using only facts explicitly supported by the supplied candidate profile/resume.
+- Do not invent or inflate skills, experience, durations, qualifications, or preferences.
+- If the answer is not supported, say "Unknown from the provided candidate data."
 - Keep the answer under 140 characters.
 
 ## Example
@@ -86,15 +94,15 @@ experience_details_template = """
 Answer the following question based on the provided experience details.
 
 ## Rules
-- Answer questions directly.
-- If it seems likely that you have the experience, even if not explicitly defined, answer as if you have the experience.
-- If unsure, respond with "I have no experience with that, but I learn fast" or "Not yet, but willing to learn."
+- Answer questions directly, using only facts explicitly supported by the supplied candidate profile/resume.
+- Do not invent or inflate skills, experience, durations, qualifications, or preferences.
+- If the answer is not supported, say "Unknown from the provided candidate data."
 - Keep the answer under 140 characters.
 
 ## Example
 My resume: 3 years as a software developer with leadership experience.
 Question: Do you have leadership experience?
-Yes, I have 3 years of leadership experience.
+Yes, I have leadership experience; its duration is not specified.
 
 Experience Details: {resume_section}
 Question: {question}
@@ -105,8 +113,9 @@ projects_template = """
 Answer the following question based on the provided project details.
 
 ## Rules
-- Answer questions directly.
-- If it seems likely that you have the experience, even if not explicitly defined, answer as if you have the experience.
+- Answer questions directly, using only facts explicitly supported by the supplied candidate profile/resume.
+- Do not invent or inflate skills, experience, durations, qualifications, or preferences.
+- If the answer is not supported, say "Unknown from the provided candidate data."
 - Keep the answer under 140 characters.
 
 ## Example
@@ -123,7 +132,9 @@ availability_template = """
 Answer the following question based on the provided availability details.
 
 ## Rules
-- Answer questions directly.
+- Answer questions directly, using only facts explicitly supported by the supplied candidate profile/resume.
+- Do not invent or inflate skills, experience, durations, qualifications, or preferences.
+- If the answer is not supported, say "Unknown from the provided candidate data."
 - Keep the answer under 140 characters.
 - Use periods only if the answer has multiple sentences.
 
@@ -141,7 +152,9 @@ salary_expectations_template = """
 Answer the following question based on the provided salary expectations.
 
 ## Rules
-- Answer questions directly.
+- Answer questions directly, using only facts explicitly supported by the supplied candidate profile/resume.
+- Do not invent or inflate skills, experience, durations, qualifications, or preferences.
+- If the answer is not supported, say "Unknown from the provided candidate data."
 - Keep the answer under 140 characters.
 - Use periods only if the answer has multiple sentences.
 
@@ -159,9 +172,9 @@ certifications_template = """
 Answer the following question based on the provided certifications.
 
 ## Rules
-- Answer questions directly.
-- If it seems likely that you have the experience, even if not explicitly defined, answer as if you have the experience.
-- If unsure, respond with "I have no experience with that, but I learn fast" or "Not yet, but willing to learn."
+- Answer questions directly, using only facts explicitly supported by the supplied candidate profile/resume.
+- Do not invent or inflate skills, experience, durations, qualifications, or preferences.
+- If the answer is not supported, say "Unknown from the provided candidate data."
 - Keep the answer under 140 characters.
 
 ## Example
@@ -178,9 +191,9 @@ languages_template = """
 Answer the following question based on the provided language skills.
 
 ## Rules
-- Answer questions directly.
-- If it seems likely that you have the experience, even if not explicitly defined, answer as if you have the experience.
-- If unsure, respond with "I have no experience with that, but I learn fast" or "Not yet, but willing to learn."
+- Answer questions directly, using only facts explicitly supported by the supplied candidate profile/resume.
+- Do not invent or inflate skills, experience, durations, qualifications, or preferences.
+- If the answer is not supported, say "Unknown from the provided candidate data."
 - Keep the answer under 140 characters. Do not add any additional languages what is not in my experience
 
 ## Example
@@ -197,7 +210,9 @@ interests_template = """
 Answer the following question based on the provided interests.
 
 ## Rules
-- Answer questions directly.
+- Answer questions directly, using only facts explicitly supported by the supplied candidate profile/resume.
+- Do not invent or inflate skills, experience, durations, qualifications, or preferences.
+- If the answer is not supported, say "Unknown from the provided candidate data."
 - Keep the answer under 140 characters.
 - Use periods only if the answer has multiple sentences.
 
@@ -246,6 +261,7 @@ Analyze the job description to identify key qualifications and requirements. Int
 Please write the cover letter in a way that directly addresses the job role and the company’s characteristics, ensuring it remains concise and engaging without unnecessary embellishments. The letter should be formatted into paragraphs and should not include a greeting or signature.
 
 ## Rules:
+- Use only candidate claims explicitly supported by the resume; do not invent or inflate skills, experience, qualifications, or durations.
 - Provide only the text of the cover letter.
 - Do not include any introductions, explanations, or additional information.
 - The letter should be formatted into paragraph.
@@ -261,93 +277,42 @@ Please write the cover letter in a way that directly addresses the job role and 
 """
 
 numeric_question_template = """
-Read the following resume carefully and answer the specific questions regarding the candidate's experience with a number of years. Follow these strategic guidelines when responding:
+Answer the numeric question using only verified facts in the supplied candidate data.
 
-1. **Related and Inferred Experience:**
-   - **Similar Technologies:** If experience with a specific technology is not explicitly stated, but the candidate has experience with similar or related technologies, provide a plausible number of years reflecting this related experience. For instance, if the candidate has experience with Python and projects involving technologies similar to Java, estimate a reasonable number of years for Java.
-   - **Projects and Studies:** Examine the candidate’s projects and studies to infer skills not explicitly mentioned. Complex and advanced projects often indicate deeper expertise.
+## Rules
+- Return only a nonnegative number when the answer is determinable; 0 is allowed.
+- For years of experience, use an explicitly stated duration or calculate from dates
+  that explicitly establish experience with the requested skill. Do not round up
+  or double-count overlapping periods; preserve fractional years when supported.
+- Do not infer skills or durations from related technologies, degrees, grades,
+  job titles, or undated projects. Academic/project experience is not professional
+  experience unless the supplied data explicitly establishes that it is.
+- If the requested number cannot be determined, return UNKNOWN. Do not guess.
+- Examples illustrate the rules; they are not facts about the candidate.
 
-2. **Indirect Experience and Academic Background:**
-   - **Type of University and Studies:** Consider the type of university and course followed.
-   - **Exam Grades:** Consider exam grades achieved. High grades in relevant subjects can indicate stronger proficiency and understanding.
-   - **Relevant thesis:** Consider the thesis of the candidate has worked. Advanced projects suggest deeper skills.
-   - **Roles and Responsibilities:** Evaluate the roles and responsibilities held to estimate experience with specific technologies or skills.
+## Examples
+Candidate: Explicitly has 0 years of Java experience. Question: Years of Java? Answer: 0
+Candidate: Explicitly has 3 years of Python experience. Question: Years of Python? Answer: 3
+Candidate: Has a CS degree and Python projects. Question: Years of Java? Answer: UNKNOWN
+Candidate: Has an undated Unity project. Question: Years of Unity? Answer: UNKNOWN
 
-
-3. **Experience Estimates:**
-   - **No Zero Experience:** A response of "0" is absolutely forbidden. If direct experience cannot be confirmed, provide a minimum of "2" years based on inferred or related experience.
-   - **For Low Experience (up to 5 years):** Estimate experience based on inferred bacherol, skills and projects, always providing at least "2" years when relevant.
-   - **For High Experience:** For high levels of experience, provide a number based on clear evidence from the resume. Avoid making inferences for high experience levels unless the evidence is strong.
-
-4. **Rules:**
-   - Answer the question directly with a number, avoiding "0" entirely.
-
-## Example 1
-```
-## Curriculum
-
-I had a degree in computer science. I have worked  years with  MQTT protocol.
-
-## Question
-
-How many years of experience do you have with IoT?
-
-## Answer
-
-4
-```
-## Example 1
-```
-## Curriculum
-
-I had a degree in computer science. 
-
-## Question
-
-How many years of experience do you have with Bash?
-
-## Answer
-
-2
-```
-
-## Example 2
-```
-## Curriculum
-
-I am a software engineer with 5 years of experience in Swift and Python. I have worked on an AI project.
-
-## Question
-
-How many years of experience do you have with AI?
-
-## Answer
-
-2
-```
-
-## Resume:
-```
+## Candidate data
 {resume_educations}
 {resume_jobs}
 {resume_projects}
-```
-        
-## Question:
+
+## Question
 {question}
-
----
-
-When responding, consider all available information, including projects, work experience, and academic background, to provide an accurate and well-reasoned answer. Make every effort to infer relevant experience and avoid defaulting to 0 if any related experience can be estimated.
-
 """
 
 options_template = """The following is a resume and an answered question about the resume, the answer is one of the options.
 
 ## Rules
-- Never choose the default/placeholder option, examples are: 'Select an option', 'None', 'Choose from the options below', etc.
-- The answer must be one of the options.
-- The answer must exclusively contain one of the options.
+- Use only facts explicitly supported by the supplied candidate profile/resume.
+- Do not infer or inflate skills, experience, durations, or qualifications.
+- Never choose a placeholder such as 'Select an option'. 'None', 'No', and zero-experience options are valid when supported.
+- If no option is supported, return UNKNOWN rather than choosing an unsupported claim.
+- Return exactly one supported option, or UNKNOWN if none is supported.
 
 ## Example
 My resume: I'm a software engineer with 10 years of experience on swift, python, C, C++.
@@ -361,6 +326,9 @@ Options: [1-2, 3-5, 6-10, 10+]
 ```
 {resume}
 ```
+
+## Candidate profile:
+{profile}
 
 ## Question:
 {question}
@@ -376,7 +344,7 @@ The objective is to fix the text of a form input on a web page.
 ## Rules
 - Use the error to fix the original text.
 - The error "Please enter a valid answer" usually means the text is too large, shorten the reply to less than a tweet.
-- For errors like "Enter a whole number between 3 and 30", just need a number.
+- Never change candidate facts or increase experience to meet form constraints. If the verified answer is not accepted, return UNKNOWN.
 
 -----
 
