@@ -5,8 +5,11 @@ import time
 from itertools import product
 from pathlib import Path
 
-from selenium.common.exceptions import NoSuchElementException
+from selenium.common.exceptions import NoSuchElementException, TimeoutException, WebDriverException
 from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from src.linkedin_selectors import (CARD_SELECTORS, SCROLL_CONTAINERS, TITLE_SELECTORS,
+                                    COMPANY_SELECTORS, LOCATION_SELECTORS, LINK_SELECTORS, METHOD_SELECTORS)
 
 import src.utils as utils
 from src.job import Job
@@ -188,37 +191,80 @@ class AIHawkJobManager:
         except Exception as exc:
             logger.warning(f"SQLite saved; JSON export failed for {job.job_id}: {exc}")
 
+    def _find_job_cards(self):
+        for selector in CARD_SELECTORS:
+            try:
+                candidates = self.driver.find_elements(By.CSS_SELECTOR, selector)
+                cards, seen = [], set()
+                for card in candidates:
+                    if not card.is_displayed():
+                        continue
+                    job_id = card.get_attribute('data-occludable-job-id') or card.get_attribute('data-job-id')
+                    links = card.find_elements(By.CSS_SELECTOR, 'a[href*="/jobs/view/"]')
+                    if not job_id and not links:
+                        continue
+                    href = links[0].get_attribute('href') if links else None
+                    if not job_id and not href:
+                        continue
+                    key = job_id or urllib.parse.urljoin('https://www.linkedin.com', href).split('?')[0].split('#')[0]
+                    if key not in seen:
+                        seen.add(key)
+                        cards.append(card)
+                if cards:
+                    logger.info("Job-card selector matched: {} ({} cards)", selector, len(cards))
+                    return cards
+            except WebDriverException as exc:
+                logger.debug("Job-card selector unavailable: {} ({})", selector, type(exc).__name__)
+        return []
+
+    def _save_job_page_debug(self):
+        directory = Path('data_folder/output')
+        try:
+            directory.mkdir(parents=True, exist_ok=True)
+        except OSError as exc:
+            logger.warning("Cannot create job-page debug directory: {}", exc)
+            return
+        # Capture independently so a failure in one does not prevent the other.
+        try:
+            path = directory / 'debug_jobs_page.html'
+            path.write_text(self.driver.page_source, encoding='utf-8')
+            logger.info("Saved job-page HTML: {}", path)
+        except (OSError, WebDriverException) as exc:
+            logger.warning("Could not save job-page HTML: {}", exc)
+        try:
+            path = directory / 'debug_jobs_page.png'
+            if self.driver.save_screenshot(str(path)):
+                logger.info("Saved job-page screenshot: {}", path)
+            else:
+                logger.warning("Browser did not save job-page screenshot: {}", path)
+        except (OSError, WebDriverException) as exc:
+            logger.warning("Could not save job-page screenshot: {}", exc)
+
     def get_jobs_from_page(self):
-
+        logger.info("Discovering job cards at {}", self.driver.current_url)
         try:
-
-            no_jobs_element = self.driver.find_element(By.CLASS_NAME, 'jobs-search-two-pane__no-results-banner--expand')
-            if 'No matching jobs found' in no_jobs_element.text or 'unfortunately, things aren' in self.driver.page_source.lower():
-                logger.debug("No matching jobs found on this page, skipping.")
-                return []
-
-        except NoSuchElementException:
-            pass
-
-        try:
-            job_results = self.driver.find_element(By.CLASS_NAME, "jobs-search-results-list")
-            utils.scroll_slow(self.driver, job_results)
-            utils.scroll_slow(self.driver, job_results, step=300, reverse=True)
-
-            job_list_elements = self.driver.find_elements(By.CLASS_NAME, 'scaffold-layout__list-container')[
-                0].find_elements(By.CLASS_NAME, 'jobs-search-results__list-item')
-            if not job_list_elements:
-                logger.debug("No job class elements found on page, skipping.")
-                return []
-
-            return job_list_elements
-
-        except NoSuchElementException:
-            logger.debug("No job results found on the page.")
-            return []
-
-        except Exception as e:
-            logger.error(f"Error while fetching job elements: {e}")
+            cards = WebDriverWait(self.driver, 10).until(lambda _: self._find_job_cards())
+            # Scrolling is optional; missing/changed scroll containers must not
+            # discard cards that were already found.
+            for selector in SCROLL_CONTAINERS:
+                try:
+                    containers = self.driver.find_elements(By.CSS_SELECTOR, selector)
+                except WebDriverException:
+                    continue
+                if containers:
+                    logger.debug("Job-list scroll selector matched: {}", selector)
+                    try:
+                        utils.scroll_slow(self.driver, containers[0])
+                        utils.scroll_slow(self.driver, containers[0], step=300, reverse=True)
+                    except (WebDriverException, ValueError) as exc:
+                        logger.debug("Optional job-list scrolling failed: {}", exc)
+                    break
+            cards = self._find_job_cards() or cards
+            logger.info("Found {} job cards at {}", len(cards), self.driver.current_url)
+            return cards
+        except (TimeoutException, WebDriverException) as exc:
+            logger.warning("Found 0 job cards at {} ({})", self.driver.current_url, type(exc).__name__)
+            self._save_job_page_debug()
             return []
 
     def read_jobs(self):
@@ -414,29 +460,54 @@ class AIHawkJobManager:
         self.driver.get(
             f"https://www.linkedin.com/jobs/search/{self.base_search_url}&keywords={encoded_position}{location}&start={job_page * 25}")
 
-    def extract_job_information_from_tile(self, job_tile):
-        logger.debug("Extracting job information from tile")
-        job_title, company, job_location, apply_method, link = "", "", "", "", ""
-        try:
-            print(job_tile.get_attribute('outerHTML'))
-            job_title = job_tile.find_element(By.CLASS_NAME, 'job-card-list__title').find_element(By.TAG_NAME, 'strong').text
-            
-            link = job_tile.find_element(By.CLASS_NAME, 'job-card-list__title').get_attribute('href').split('?')[0]
-            company = job_tile.find_element(By.CLASS_NAME, 'job-card-container__primary-description').text
-            logger.debug(f"Job information extracted: {job_title} at {company}")
-        except NoSuchElementException:
-            logger.warning("Some job information (title, link, or company) is missing.")
-        try:
-            job_location = job_tile.find_element(By.CLASS_NAME, 'job-card-container__metadata-item').text
-        except NoSuchElementException:
-            logger.warning("Job location is missing.")
-        try:
-            apply_method = job_tile.find_element(By.CLASS_NAME, 'job-card-container__apply-method').text
-        except NoSuchElementException:
-            apply_method = "Applied"
-            logger.warning("Apply method not found, assuming 'Applied'.")
+    def _tile_value(self, tile, selectors, field, attribute=None, accepted=None):
+        for selector in selectors:
+            try:
+                for element in tile.find_elements(By.CSS_SELECTOR, selector):
+                    value = element.get_attribute(attribute) if attribute else element.text
+                    if not value and not attribute:
+                        value = element.get_attribute('aria-label')
+                    if value and value.strip() and (accepted is None or value.strip().lower() in accepted):
+                        logger.debug("Job {} fallback matched: {}", field, selector)
+                        return value.strip()
+            except WebDriverException:
+                continue
+        logger.debug("No job {} selector matched", field)
+        return ''
 
-        return job_title, company, job_location, link, apply_method
+    def extract_job_information_from_tile(self, job_tile):
+        job_title = self._tile_value(job_tile, TITLE_SELECTORS, 'title')
+        company = self._tile_value(job_tile, COMPANY_SELECTORS, 'company')
+        location = self._tile_value(job_tile, LOCATION_SELECTORS, 'location')
+        link = self._tile_value(job_tile, LINK_SELECTORS, 'link', 'href')
+        if link:
+            link = urllib.parse.urljoin('https://www.linkedin.com', link).split('?')[0].split('#')[0]
+        else:
+            for attribute in ('data-occludable-job-id', 'data-job-id'):
+                job_id = job_tile.get_attribute(attribute)
+                if job_id and job_id.isdigit():
+                    link = f'https://www.linkedin.com/jobs/view/{job_id}'
+                    logger.debug("Job link fallback matched attribute: {}", attribute)
+                    break
+        if not job_title:
+            job_title = self._tile_value(job_tile, LINK_SELECTORS, 'title attribute', 'aria-label')
+        method = ''
+        for selector in METHOD_SELECTORS:
+            value = self._tile_value(job_tile, (selector,), 'application method',
+                                     accepted={'easy apply', 'applied', 'apply', 'continue'})
+            # Footer items also include timestamps and promoted labels.
+            if value.lower() in ('easy apply', 'applied', 'apply', 'continue'):
+                method = value.title() if value.lower() != 'easy apply' else 'Easy Apply'
+                break
+        if not method:
+            lines = [line.strip().lower() for line in job_tile.text.splitlines()]
+            for label in ('applied', 'easy apply', 'continue', 'apply'):
+                if label in lines:
+                    method = 'Easy Apply' if label == 'easy apply' else label.title()
+                    logger.debug("Job application method fallback matched visible label: {}", label)
+                    break
+        # Missing method is unknown, never evidence of an earlier application.
+        return job_title, company, location, link, method
 
     def is_blacklisted(self, job_title, company, link, job_location):
         logger.debug(f"Checking if job is blacklisted: {job_title} at {company} in {job_location}")

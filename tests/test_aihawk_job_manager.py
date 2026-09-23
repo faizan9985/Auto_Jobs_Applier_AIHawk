@@ -65,31 +65,19 @@ def next_job_page(self, position, location, job_page):
 
 
 def test_get_jobs_from_page_no_jobs(mocker, job_manager):
-    """Test get_jobs_from_page when no jobs are found."""
-    mocker.patch.object(job_manager.driver, 'find_element',
-                        side_effect=NoSuchElementException)
-
-    jobs = job_manager.get_jobs_from_page()
-    assert jobs == []
+    from selenium.common.exceptions import TimeoutException
+    mocker.patch('src.aihawk_job_manager.WebDriverWait').return_value.until.side_effect = TimeoutException
+    capture = mocker.patch.object(job_manager, '_save_job_page_debug')
+    assert job_manager.get_jobs_from_page() == []
+    capture.assert_called_once()
 
 
 def test_get_jobs_from_page_with_jobs(mocker, job_manager):
-    """Test get_jobs_from_page when job elements are found."""
-    # Mock the no_jobs_element to behave correctly
-    mock_no_jobs_element = mocker.Mock()
-    mock_no_jobs_element.text = "No matching jobs found"
-
-    # Mocking the find_element to return the mock no_jobs_element
-    mocker.patch.object(job_manager.driver, 'find_element',
-                        return_value=mock_no_jobs_element)
-
-    # Mock the page_source
-    mocker.patch.object(job_manager.driver, 'page_source',
-                        return_value="some page content")
-
-    # Ensure jobs are returned as empty list due to "No matching jobs found"
-    jobs = job_manager.get_jobs_from_page()
-    assert jobs == []  # No jobs expected due to "No matching jobs found"
+    cards = [mocker.Mock()]
+    job_manager.driver.page_source = 'No matching jobs found (hidden template)'
+    job_manager.driver.find_elements.return_value = []
+    mocker.patch.object(job_manager, '_find_job_cards', return_value=cards)
+    assert job_manager.get_jobs_from_page() == cards
 
 
 def test_apply_jobs_with_no_jobs(job_manager):
