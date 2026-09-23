@@ -23,6 +23,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import Select, WebDriverWait
 
 import src.utils as utils
+from src.linkedin_description import read_job_description
 from loguru import logger
 
 
@@ -244,33 +245,7 @@ class AIHawkEasyApplier:
         raise Exception("No clickable 'Easy Apply' button found")
 
     def _get_job_description(self) -> str:
-        logger.debug("Getting job description")
-        try:
-            try:
-                see_more_button = self.driver.find_element(By.XPATH,
-                                                           '//button[@aria-label="Click to see more description"]')
-                actions = ActionChains(self.driver)
-                actions.move_to_element(see_more_button).click().perform()
-                time.sleep(2)
-            except NoSuchElementException:
-                logger.debug("See more button not found, skipping")
-
-            try:
-                description = self.driver.find_element(By.CLASS_NAME, 'jobs-description-content__text').text
-            except NoSuchElementException:
-                logger.debug("First class not found, checking for second class for premium members")
-                description = self.driver.find_element(By.CLASS_NAME, 'job-details-about-the-job-module__description').text
-
-            logger.debug("Job description retrieved successfully")
-            return description
-        except NoSuchElementException:
-            tb_str = traceback.format_exc()
-            logger.error(f"Job description not found: {tb_str}")
-            raise Exception(f"Job description not found: \nTraceback:\n{tb_str}")
-        except Exception:
-            tb_str = traceback.format_exc()
-            logger.error(f"Error getting Job description: {tb_str}")
-            raise Exception(f"Error getting Job description: \nTraceback:\n{tb_str}")
+        return read_job_description(self.driver)
 
     def _get_job_recruiter(self):
         logger.debug("Getting job recruiter information")

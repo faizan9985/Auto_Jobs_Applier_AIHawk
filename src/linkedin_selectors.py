@@ -31,3 +31,34 @@ LINK_SELECTORS = ('a.job-card-list__title--link', 'a.job-card-list__title',
                   'a.base-card__full-link', 'a[href*="/jobs/view/"]')
 METHOD_SELECTORS = ('.job-card-container__apply-method', '.job-card-container__footer-item',
                     '.job-search-card__easy-apply-label', '[aria-label*="Easy Apply"]')
+
+
+# Narrow description bodies first; never fall back to main/body/job-details panes.
+DESCRIPTION_SELECTORS = (
+    '#job-details', '.jobs-description-content__text',
+    '.job-details-about-the-job-module__description',
+    '[data-testid="job-description"]', '[data-view-name="job-description"]',
+    '[data-test-id="job-description"]',
+    '[data-view-name="job-details-about-the-job"] .show-more-less-html__markup',
+    'section.description .show-more-less-html__markup',
+    '[aria-label="Job description"]', '[aria-labelledby="job-description-heading"]',
+    '[aria-labelledby="job-details-about-the-job-heading"]',
+)
+DESCRIPTION_HEADING_XPATH = (
+    '//section[.//h2[normalize-space(.)="About the job"]]'
+    '//*[contains(@class,"show-more-less-html__markup")]'
+)
+DESCRIPTION_EXPAND_XPATH = (
+    './/button[not(@aria-expanded="true") and ('
+    '@aria-label="Click to see more description" or '
+    'contains(@aria-label,"Show more description") or '
+    'normalize-space(.)="Show more" or normalize-space(.)="See more" or '
+    'normalize-space(.)="Show more, more about job")]|'
+    './/*[@role="button" and @aria-expanded="false" and '
+    '(normalize-space(.)="Show more" or normalize-space(.)="See more")]'
+)
+DESCRIPTION_EXPAND_SCOPE_XPATH = (
+    './ancestor::*[contains(concat(" ",normalize-space(@class)," ")," jobs-description ") '
+    'or (self::section and (.//h2[normalize-space(.)="About the job"] '
+    'or contains(concat(" ",normalize-space(@class)," ")," description ")))][1]'
+)
