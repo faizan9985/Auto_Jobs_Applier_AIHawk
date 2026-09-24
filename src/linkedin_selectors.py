@@ -32,6 +32,27 @@ LINK_SELECTORS = ('a.job-card-list__title--link', 'a.job-card-list__title',
 METHOD_SELECTORS = ('.job-card-container__apply-method', '.job-card-container__footer-item',
                     '.job-search-card__easy-apply-label', '[aria-label*="Easy Apply"]')
 
+# Current SDUI header from the saved detail page. Scope away from similar jobs
+# and the company overview; class names on this layout are generated.
+DETAIL_HEADER_SELECTOR = '[id^="JobDetails_ManageJobBanner_"] + div'
+DETAIL_TITLE_SELECTORS = (
+    f'{DETAIL_HEADER_SELECTOR} [data-display-contents="true"] > p',
+    '[data-testid="job-title"]',
+    '.job-details-jobs-unified-top-card__job-title h1',
+    '.jobs-unified-top-card__job-title', '.top-card-layout__title',
+)
+DETAIL_COMPANY_SELECTORS = (
+    f'{DETAIL_HEADER_SELECTOR} a[href*="/company/"]',
+    '.job-details-jobs-unified-top-card__company-name a',
+    '.jobs-unified-top-card__company-name a',
+    '.topcard__org-name-link', '[data-testid="company-name"]',
+)
+DETAIL_LOCATION_SELECTORS = (
+    f'{DETAIL_HEADER_SELECTOR} p:has(> span:nth-of-type(2)) > span:first-child',
+    '[data-testid="job-location"]',
+    '.job-details-jobs-unified-top-card__primary-description-container .tvm__text--low-emphasis',
+    '.jobs-unified-top-card__bullet', '.topcard__flavor--bullet',
+)
 
 # Narrow description bodies first; never fall back to main/body/job-details panes.
 DESCRIPTION_SECTION_SELECTOR = '[id^="JobDetails_AboutTheJob_"]'

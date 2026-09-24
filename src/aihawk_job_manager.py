@@ -9,11 +9,12 @@ from selenium.common.exceptions import NoSuchElementException, TimeoutException,
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from src.linkedin_selectors import (CARD_SELECTORS, SCROLL_CONTAINERS, TITLE_SELECTORS,
-                                    COMPANY_SELECTORS, LOCATION_SELECTORS, LINK_SELECTORS, METHOD_SELECTORS)
+                                    COMPANY_SELECTORS, LOCATION_SELECTORS, LINK_SELECTORS, METHOD_SELECTORS,
+                                    DETAIL_TITLE_SELECTORS, DETAIL_COMPANY_SELECTORS, DETAIL_LOCATION_SELECTORS)
 
 import src.utils as utils
 from src.job import Job
-from src.job_store import JobStore, PENDING
+from src.job_store import JobStore, PENDING, identity
 from src.aihawk_easy_applier import AIHawkEasyApplier
 from loguru import logger
 import urllib.parse
@@ -276,18 +277,25 @@ class AIHawkJobManager:
         search_url = self.driver.current_url
         reader = AIHawkEasyApplier(self.driver, None, [], None, None)
         for job in jobs:
-            store = self._store()
-            row = store.upsert(job)
-            job = store.to_job(row)
             try:
                 if job.link:
                     self.driver.get(job.link)
                     time.sleep(random.uniform(1.5, 3.5))
+                    if self._missing_identity_fields(job):
+                        self._fill_detail_metadata(job)
                     description = reader._get_job_description()
                     if description:
                         job.description = description
             except Exception as exc:
                 logger.warning(f"Description unavailable for {job.link}: {exc}")
+            missing = self._missing_identity_fields(job)
+            if missing:
+                logger.warning("Skipping malformed job; missing fields: {}; URL: {}; LinkedIn job id: {}",
+                               ', '.join(missing), job.link, identity(job)[0] or 'unknown')
+                continue
+            store = self._store()
+            row = store.upsert(job)
+            job = store.to_job(row)
             job.evaluate_eligibility(self._candidate())
             store.evaluate(job)
             if self.relevance_resume is not None:
@@ -300,6 +308,32 @@ class AIHawkJobManager:
             else:
                 self._export_result(job, "data")
         self.driver.get(search_url)
+
+    @staticmethod
+    def _missing_identity_fields(job):
+        return [field for field in ('title', 'company', 'location')
+                if not getattr(job, field).strip()]
+
+    def _fill_detail_metadata(self, job):
+        """Fill only absent card values, waiting for the detail header to render."""
+        selectors_by_field = {
+            'title': DETAIL_TITLE_SELECTORS,
+            'company': DETAIL_COMPANY_SELECTORS,
+            'location': DETAIL_LOCATION_SELECTORS,
+        }
+
+        def extract(_):
+            for field in self._missing_identity_fields(job):
+                value = self._tile_value(self.driver, selectors_by_field[field], f'detail {field}')
+                if value:
+                    setattr(job, field, value)
+            return not self._missing_identity_fields(job)
+
+        try:
+            WebDriverWait(self.driver, 10, poll_frequency=0.5).until(extract)
+        except (TimeoutException, WebDriverException):
+            # Keep any recovered values; read_jobs validates before persistence.
+            pass
 
     def apply_jobs(self):
         store = self._store()
