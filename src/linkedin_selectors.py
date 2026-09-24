@@ -34,6 +34,9 @@ METHOD_SELECTORS = ('.job-card-container__apply-method', '.job-card-container__f
 
 
 # Narrow description bodies first; never fall back to main/body/job-details panes.
+DESCRIPTION_SECTION_SELECTOR = '[id^="JobDetails_AboutTheJob_"]'
+DESCRIPTION_TEXT_BOX_SELECTOR = '[data-testid="expandable-text-box"]'
+DESCRIPTION_EXPAND_BUTTON_SELECTOR = '[data-testid="expandable-text-button"]'
 DESCRIPTION_SELECTORS = (
     '#job-details', '.jobs-description-content__text',
     '.job-details-about-the-job-module__description',
