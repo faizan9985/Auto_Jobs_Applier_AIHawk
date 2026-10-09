@@ -1,0 +1,72 @@
+[
+    {
+        "job_id": "9423c82e-7621-47cd-918f-6971c463bb99",
+        "description": "",
+        "apply_method": "Easy Apply",
+        "company": "Example",
+        "job_title": "Engineer",
+        "link": "https://www.linkedin.com/jobs/view/123",
+        "job_recruiter": "",
+        "job_location": "Remote",
+        "pdf_path": "file:///X:/Job%20Automation/Auto_Jobs_Applier_AIHawk",
+        "eligibility": {
+            "status": "needs_review",
+            "reasons": [
+                "Job description is unavailable.",
+                "Candidate eligibility profile is unavailable."
+            ],
+            "evidence": [],
+            "sponsorship_status": "unknown",
+            "work_authorization_status": "unknown",
+            "enrollment_status": "unknown",
+            "date_status": "unknown"
+        },
+        "application_status": "skipped_by_user",
+        "approval": {
+            "decision": "skip",
+            "timestamp": "2026-09-22T17:51:09.923298+00:00",
+            "manual_approval_before_submit": true
+        },
+        "cover_letter_path": "",
+        "application_answers": [],
+        "state": "skipped",
+        "submitted_at": null,
+        "failure_reason": null,
+        "skip_reason": null
+    },
+    {
+        "job_id": "2b2bbc7e-f8f6-44ca-a2a8-5875e06cf12f",
+        "description": "",
+        "apply_method": "Easy Apply",
+        "company": "Example",
+        "job_title": "Engineer",
+        "link": "https://www.linkedin.com/jobs/view/456",
+        "job_recruiter": "",
+        "job_location": "Remote",
+        "pdf_path": "file:///X:/Job%20Automation/Auto_Jobs_Applier_AIHawk",
+        "eligibility": {
+            "status": "needs_review",
+            "reasons": [
+                "Job description is unavailable.",
+                "Candidate eligibility profile is unavailable."
+            ],
+            "evidence": [],
+            "sponsorship_status": "unknown",
+            "work_authorization_status": "unknown",
+            "enrollment_status": "unknown",
+            "date_status": "unknown"
+        },
+        "application_status": "skipped_by_user",
+        "approval": {
+            "decision": "skip",
+            "timestamp": "2026-09-22T17:51:09.930350+00:00",
+            "manual_approval_before_submit": true
+        },
+        "cover_letter_path": "",
+        "application_answers": [],
+        "state": "skipped",
+        "submitted_at": null,
+        "failure_reason": null,
+        "skip_reason": null
+    }
+]

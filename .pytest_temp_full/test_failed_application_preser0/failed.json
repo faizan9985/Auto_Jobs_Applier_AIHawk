@@ -1,0 +1,30 @@
+[
+    {
+        "job_id": null,
+        "description": "We are unable to sponsor.",
+        "apply_method": "Easy Apply",
+        "company": "Example",
+        "job_title": "Engineer",
+        "link": "https://example.com/job/1",
+        "job_recruiter": "",
+        "job_location": "Remote",
+        "pdf_path": "file:///X:/Job%20Automation/Auto_Jobs_Applier_AIHawk",
+        "eligibility": {
+            "status": "ineligible",
+            "reasons": [
+                "Sponsorship is unavailable; candidate needs future sponsorship."
+            ],
+            "evidence": [
+                "We are unable to sponsor"
+            ],
+            "sponsorship_status": "does_not_support",
+            "work_authorization_status": "unknown",
+            "enrollment_status": "unknown",
+            "date_status": "unknown"
+        },
+        "application_status": "failed",
+        "approval": null,
+        "cover_letter_path": "",
+        "application_answers": []
+    }
+]

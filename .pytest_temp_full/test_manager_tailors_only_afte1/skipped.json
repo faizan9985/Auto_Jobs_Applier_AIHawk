@@ -1,0 +1,26 @@
+[
+    {
+        "job_id": "2f88b429-31ab-4281-bfec-582bcfed578e",
+        "description": "Unity simulation Python required. C# preferred. 5 years experience.",
+        "apply_method": "Easy Apply",
+        "company": "Company",
+        "job_title": "Unity Developer",
+        "link": "https://example.com/job",
+        "job_recruiter": "",
+        "job_location": "Remote",
+        "pdf_path": "file:///X:/Job%20Automation/Auto_Jobs_Applier_AIHawk",
+        "eligibility": {
+            "status": "ineligible",
+            "reasons": [],
+            "evidence": []
+        },
+        "application_status": "skipped",
+        "approval": null,
+        "cover_letter_path": "",
+        "application_answers": [],
+        "state": "skipped",
+        "submitted_at": null,
+        "failure_reason": null,
+        "skip_reason": "ineligible"
+    }
+]

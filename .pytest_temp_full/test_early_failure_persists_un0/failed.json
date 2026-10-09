@@ -1,0 +1,29 @@
+[
+    {
+        "job_id": null,
+        "description": "",
+        "apply_method": "Easy Apply",
+        "company": "Example",
+        "job_title": "Engineer",
+        "link": "https://example.com/job/1",
+        "job_recruiter": "",
+        "job_location": "Remote",
+        "pdf_path": "file:///X:/Job%20Automation/Auto_Jobs_Applier_AIHawk",
+        "eligibility": {
+            "status": "needs_review",
+            "reasons": [
+                "Job description is unavailable.",
+                "Candidate eligibility profile is unavailable."
+            ],
+            "evidence": [],
+            "sponsorship_status": "unknown",
+            "work_authorization_status": "unknown",
+            "enrollment_status": "unknown",
+            "date_status": "unknown"
+        },
+        "application_status": "failed",
+        "approval": null,
+        "cover_letter_path": "",
+        "application_answers": []
+    }
+]

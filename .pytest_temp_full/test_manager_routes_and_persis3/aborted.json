@@ -1,0 +1,37 @@
+[
+    {
+        "job_id": "ef5a2adc-a599-483a-a3a7-c3b08aa94b53",
+        "description": "",
+        "apply_method": "Easy Apply",
+        "company": "Example",
+        "job_title": "Engineer",
+        "link": "https://www.linkedin.com/jobs/view/123",
+        "job_recruiter": "",
+        "job_location": "Remote",
+        "pdf_path": "file:///X:/Job%20Automation/Auto_Jobs_Applier_AIHawk",
+        "eligibility": {
+            "status": "needs_review",
+            "reasons": [
+                "Job description is unavailable.",
+                "Candidate eligibility profile is unavailable."
+            ],
+            "evidence": [],
+            "sponsorship_status": "unknown",
+            "work_authorization_status": "unknown",
+            "enrollment_status": "unknown",
+            "date_status": "unknown"
+        },
+        "application_status": "aborted",
+        "approval": {
+            "decision": "abort",
+            "timestamp": "2026-09-22T17:51:10.014810+00:00",
+            "manual_approval_before_submit": true
+        },
+        "cover_letter_path": "",
+        "application_answers": [],
+        "state": "deferred",
+        "submitted_at": null,
+        "failure_reason": null,
+        "skip_reason": null
+    }
+]

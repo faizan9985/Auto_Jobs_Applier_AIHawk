@@ -1,0 +1,32 @@
+[
+    {
+        "job_id": "92680ad8-a405-432f-8284-13618eb07acd",
+        "description": "Visa sponsorship is available.",
+        "apply_method": "Easy Apply",
+        "company": "Example",
+        "job_title": "Engineer",
+        "link": "https://www.linkedin.com/jobs/view/123",
+        "job_recruiter": "",
+        "job_location": "Remote",
+        "pdf_path": "file:///X:/Job%20Automation/Auto_Jobs_Applier_AIHawk",
+        "eligibility": {
+            "status": "needs_review",
+            "reasons": [
+                "Candidate eligibility profile is unavailable."
+            ],
+            "evidence": [],
+            "sponsorship_status": "unknown",
+            "work_authorization_status": "unknown",
+            "enrollment_status": "unknown",
+            "date_status": "unknown"
+        },
+        "application_status": "submitted",
+        "approval": null,
+        "cover_letter_path": "",
+        "application_answers": [],
+        "state": "submitted",
+        "submitted_at": "2026-09-22T17:51:09.784777+00:00",
+        "failure_reason": null,
+        "skip_reason": null
+    }
+]

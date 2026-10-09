@@ -1,53 +1,59 @@
-remote: true
-
-experienceLevel:
-  internship: false
+# First live test: pass --mode discover; bare main.py defaults to apply.
+# remote: false omits the remote-only filter; it is not a candidate fact.
+# Both experienceLevel (validation) and experience_level (search) are required.
+# Keep their entry order: discovery maps it to numeric search IDs.
+# Existing LLM settings retained; discovery needs no LLM credentials.
+remote: false
+experienceLevel: &id001
+  internship: true
   entry: true
   associate: true
-  mid-senior level: true
+  mid-senior level: false
   director: false
   executive: false
-
 jobTypes:
   full-time: true
   contract: false
   part-time: false
-  temporary: true
-  internship: false
+  temporary: false
+  internship: true
   other: false
-  volunteer: true
-
+  volunteer: false
 date:
   all time: false
   month: false
-  week: false
-  24 hours: true
-
+  week: true
+  24 hours: false
 positions:
-  - Software engineer
-
+- New Grad Software Engineer
+- Software Engineer
+- Frontend Engineer
+- Full Stack Engineer
+- Unity Developer
+- XR Developer
+- AR Developer
+- VR Developer
+- Graphics Engineer
+- 3D Software Developer
+- Simulation Engineer
+- Visualization Engineer
+- Digital Twin Engineer
+- Graduate Software Engineering Intern
+- Post Graduate Software Internship
 locations:
-  - Germany
-
+- United States
 apply_once_at_company: true
-
 distance: 100
-
-company_blacklist:
-  - wayfair
-  - Crossover
-
-title_blacklist:
-  - word1
-  - word2
-
-location_blacklist:
-  - Brazil
-
+company_blacklist: []
+title_blacklist: []
+location_blacklist: []
 job_applicants_threshold:
   min_applicants: 0
-  max_applicants: 30
-
+  max_applicants: 1000
 llm_model_type: openai
-llm_model: 'gpt-4o-mini'
-# llm_api_url: 'https://api.pawan.krd/cosmosrp/v1'
+llm_model: gpt-4o-mini
+experience_level: *id001
+manual_approval_before_submit: true
+enforce_eligibility_filter: true
+tailor_resume_per_job: true
+minimum_relevance_score: 0

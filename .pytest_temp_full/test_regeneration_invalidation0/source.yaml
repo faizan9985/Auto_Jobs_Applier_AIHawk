@@ -1,0 +1,28 @@
+education_details:
+- education_level: Bachelor
+  year_of_completion: '2026'
+experience_details:
+- company: Example
+  employment_period: 2025 - 2026
+  key_responsibilities:
+  - responsibility: Maintained SQL reports.
+  - responsibility: Built Unity simulation with Python tooling.
+  position: Intern
+interests:
+- Rust
+legal_authorization:
+  us_work_authorization: 'Yes'
+personal_information:
+  email: sample@example.com
+  name: Sample Candidate
+projects:
+- description: SQL reports
+  name: Reports
+- description: Unity simulation with Python tooling
+  name: Simulator
+skills:
+- SQL
+- Python
+- Unity
+- Docker
+summary: Software developer with project experience.

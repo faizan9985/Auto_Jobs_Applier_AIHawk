@@ -1,0 +1,72 @@
+[
+    {
+        "job_id": "d998d273-62ad-44f6-b8ef-5df57c5c188d",
+        "description": "",
+        "apply_method": "Easy Apply",
+        "company": "Example",
+        "job_title": "Engineer",
+        "link": "https://www.linkedin.com/jobs/view/123",
+        "job_recruiter": "",
+        "job_location": "Remote",
+        "pdf_path": "file:///X:/Job%20Automation/Auto_Jobs_Applier_AIHawk",
+        "eligibility": {
+            "status": "needs_review",
+            "reasons": [
+                "Job description is unavailable.",
+                "Candidate eligibility profile is unavailable."
+            ],
+            "evidence": [],
+            "sponsorship_status": "unknown",
+            "work_authorization_status": "unknown",
+            "enrollment_status": "unknown",
+            "date_status": "unknown"
+        },
+        "application_status": "submitted",
+        "approval": {
+            "decision": "approve",
+            "timestamp": "2026-09-22T17:51:09.873288+00:00",
+            "manual_approval_before_submit": true
+        },
+        "cover_letter_path": "",
+        "application_answers": [],
+        "state": "submitted",
+        "submitted_at": "2026-09-22T17:51:09.875598+00:00",
+        "failure_reason": null,
+        "skip_reason": null
+    },
+    {
+        "job_id": "0666af58-e831-4d9c-b7e5-ca04087e27f7",
+        "description": "",
+        "apply_method": "Easy Apply",
+        "company": "Example",
+        "job_title": "Engineer",
+        "link": "https://www.linkedin.com/jobs/view/456",
+        "job_recruiter": "",
+        "job_location": "Remote",
+        "pdf_path": "file:///X:/Job%20Automation/Auto_Jobs_Applier_AIHawk",
+        "eligibility": {
+            "status": "needs_review",
+            "reasons": [
+                "Job description is unavailable.",
+                "Candidate eligibility profile is unavailable."
+            ],
+            "evidence": [],
+            "sponsorship_status": "unknown",
+            "work_authorization_status": "unknown",
+            "enrollment_status": "unknown",
+            "date_status": "unknown"
+        },
+        "application_status": "submitted",
+        "approval": {
+            "decision": "approve",
+            "timestamp": "2026-09-22T17:51:09.883300+00:00",
+            "manual_approval_before_submit": true
+        },
+        "cover_letter_path": "",
+        "application_answers": [],
+        "state": "submitted",
+        "submitted_at": "2026-09-22T17:51:09.884287+00:00",
+        "failure_reason": null,
+        "skip_reason": null
+    }
+]

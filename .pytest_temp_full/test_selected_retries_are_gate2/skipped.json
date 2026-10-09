@@ -1,0 +1,31 @@
+[
+    {
+        "job_id": "b4aac591-6e45-4d6b-8fb4-0ba19aa1848b",
+        "description": "Original description",
+        "apply_method": "Easy Apply",
+        "company": "Example",
+        "job_title": "Engineer",
+        "link": "https://example.com/job",
+        "job_recruiter": "",
+        "job_location": "Remote",
+        "pdf_path": "file:///X:/Job%20Automation/Auto_Jobs_Applier_AIHawk",
+        "eligibility": {
+            "status": "ineligible",
+            "reasons": [
+                "Specific candidate mismatch"
+            ],
+            "evidence": [
+                "Original description"
+            ],
+            "sponsorship_status": "unknown"
+        },
+        "application_status": "skipped",
+        "approval": null,
+        "cover_letter_path": "",
+        "application_answers": [],
+        "state": "skipped",
+        "submitted_at": null,
+        "failure_reason": null,
+        "skip_reason": "ineligible"
+    }
+]

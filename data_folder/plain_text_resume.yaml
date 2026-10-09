@@ -1,130 +1,140 @@
+skills:
+- Unity
+- C#
+- XR Development
+- Virtual Reality
+- Augmented Reality
+- WebGL
+- React
+- TypeScript
+- JavaScript
+- Python
+- Flask
+- Celery
+- Docker
+- Git
+- GitHub
+- REST APIs
+- 3D Visualization
+- Digital Twins
+- Software Development
+- Frontend Development
+professional_experience_years: null
+candidate_eligibility:
+  current_visa_status: F-1
+  graduation_date: 2027-05-20
+  earliest_start_date: 2027-06-07
+  opt_eligible: true
+  stem_opt_eligible: true
+  requires_future_h1b_sponsorship: true
+  currently_authorized_to_work_in_us: true
+  work_authorization_start_date: null
+  work_authorization_end_date: null
+  willing_to_relocate: true
+  target_countries:
+  - United States
+  is_us_citizen: false
+  is_us_permanent_resident: false
+  currently_enrolled: true
+  returning_to_school_after_internship: false
 personal_information:
-  name: "[Your Name]"
-  surname: "[Your Surname]"
-  date_of_birth: "[Your Date of Birth]"
-  country: "[Your Country]"
-  city: "[Your City]"
-  address: "[Your Address]"
-  zip_code: "[Your zip code]"
-  phone_prefix: "[Your Phone Prefix]"
-  phone: "[Your Phone Number]"
-  email: "[Your Email Address]"
-  github: "[Your GitHub Profile URL]"
-  linkedin: "[Your LinkedIn Profile URL]"
-
+  name: Faizan Safir
+  surname: Shreyas
+  date_of_birth: 09/24/2004
+  country: United States
+  city: Moscow, Idaho
+  address: 101 S Lilly St
+  zip_code: '83843'
+  phone_prefix: '208'
+  phone: '5960066'
+  email: faizan.safir@gmail.com
+  github: github.com/faizan9985
+  linkedin: https://www.linkedin.com/in/faizan-safir-shreyas-5b6816223/
 education_details:
-  - education_level: "[Your Education Level]"
-    institution: "[Your Institution]"
-    field_of_study: "[Your Field of Study]"
-    final_evaluation_grade: "[Your Final Evaluation Grade]"
-    start_date: "[Start Date]"
-    year_of_completion: "[Year of Completion]"
-    exam:
-      exam_name_1: "[Grade]"
-      exam_name_2: "[Grade]"
-      exam_name_3: "[Grade]"
-      exam_name_4: "[Grade]"
-      exam_name_5: "[Grade]"
-      exam_name_6: "[Grade]"
-
+- education_level: Undergraduate
+  institution: University of Idaho
+  field_of_study: Virtual Technology and Design
+  application_field_of_study: Computer Science
+  final_evaluation_grade: 4.0 GPA
+  start_date: 08/2022
+  year_of_completion: 05/2027
 experience_details:
-  - position: "[Your Position]"
-    company: "[Company Name]"
-    employment_period: "[Employment Period]"
-    location: "[Location]"
-    industry: "[Industry]"
-    key_responsibilities:
-      - responsibility_1: "[Responsibility Description]"
-      - responsibility_2: "[Responsibility Description]"
-      - responsibility_3: "[Responsibility Description]"
-    skills_acquired:
-      - "[Skill]"
-      - "[Skill]"
-      - "[Skill]"
-
-  - position: "[Your Position]"
-    company: "[Company Name]"
-    employment_period: "[Employment Period]"
-    location: "[Location]"
-    industry: "[Industry]"
-    key_responsibilities:
-      - responsibility_1: "[Responsibility Description]"
-      - responsibility_2: "[Responsibility Description]"
-      - responsibility_3: "[Responsibility Description]"
-    skills_acquired:
-      - "[Skill]"
-      - "[Skill]"
-      - "[Skill]"
-
+- position: Software Developer Intern
+  company: Idaho National Laboratory
+  employment_period: 14-month internship
+  location: Idaho Falls, Idaho
+  industry: Energy / Research / Software
+  key_responsibilities:
+  - responsibility_1: Contributed to DeepLynx Visualize, a browser-based nuclear digital
+      twin platform that overlays live and historical sensor data onto 3D facility
+      models.
+  - responsibility_2: Developed and debugged features across a Unity WebGL 3D viewer,
+      React/Redux/TypeScript frontend, Python Flask/Celery model-processing pipeline,
+      and graph-database-backed services.
+  - responsibility_3: Built and tested production-facing features and bug fixes for
+      sensor visualization, model scoping, material corruption, fullscreen rendering,
+      and WebGL performance; 8 branches were deployed to production.
+  skills_acquired:
+  - Unity
+  - C#
+  - WebGL
+  - React
+  - Redux
+  - TypeScript
+  - Python
+  - Flask
+  - Celery
+  - Docker
+  - Digital Twins
+  - 3D Visualization
+- position: Junior Project Manager
+  company: University of Idaho ITS
+  employment_period: Current
+  location: Moscow, Idaho
+  industry: Higher Education / Information Technology
+  key_responsibilities: []
+  skills_acquired: []
 projects:
-  - name: "[Project Name]"
-    description: "[Project Description]"
-    link: "[Project Link]"
-
-  - name: "[Project Name]"
-    description: "[Project Description]"
-    link: "[Project Link]"
-
-achievements:
-  - name: "[Achievement Name]"
-    description: "[Achievement Description]"
-  - name: "[Achievement Name]"
-    description: "[Achievement Description]"
-
-certifications:
-  - name: "[Certification Name]"
-    description: "[Certification Description]"
-  - name: "[Certification Name]"
-    description: "[Certification Description]"
-
-languages:
-  - language: "[Language]"
-    proficiency: "[Proficiency Level]"
-  - language: "[Language]"
-    proficiency: "[Proficiency Level]"
-
-interests:
-  - "[Interest]"
-  - "[Interest]"
-  - "[Interest]"
-
+- name: DeepLynx Visualize
+  description: Browser-based nuclear digital twin platform combining Unity WebGL,
+    React/Redux/TypeScript, Python Flask/Celery, Docker, and a graph database backend
+    to visualize live and historical sensor data on 3D facility models.
+  link: null
+achievements: []
+certifications: []
+languages: []
+interests: []
 availability:
-  notice_period: "[Notice Period]"
-
+  notice_period: Available to start full-time 2027-06-07
 salary_expectations:
-  salary_range_usd: "[Salary Range]"
-
+  salary_range_usd: null
 self_identification:
-  gender: "[Gender]"
-  pronouns: "[Pronouns]"
-  veteran: "[Yes/No]"
-  disability: "[Yes/No]"
-  ethnicity: "[Ethnicity]"
-
-
+  gender: 'Male'
+  pronouns: 'He/Him/Them'
+  veteran: 'No'
+  disability: 'None'
+  ethnicity: 'Hispanic or Latino'
 legal_authorization:
-  eu_work_authorization: "[Yes/No]"
-  us_work_authorization: "[Yes/No]"
-  requires_us_visa: "[Yes/No]"
-  requires_us_sponsorship: "[Yes/No]"
-  requires_eu_visa: "[Yes/No]"
-  legally_allowed_to_work_in_eu: "[Yes/No]"
-  legally_allowed_to_work_in_us: "[Yes/No]"
-  requires_eu_sponsorship: "[Yes/No]"
-  canada_work_authorization: "[Yes/No]"
-  requires_canada_visa: "[Yes/No]"
-  legally_allowed_to_work_in_canada: "[Yes/No]"
-  requires_canada_sponsorship: "[Yes/No]"
-  uk_work_authorization: "[Yes/No]"
-  requires_uk_visa: "[Yes/No]"
-  legally_allowed_to_work_in_uk: "[Yes/No]"
-  requires_uk_sponsorship: "[Yes/No]"
-
-
+  eu_work_authorization: null
+  us_work_authorization: 'Yes'
+  requires_us_visa: 'Yes'
+  requires_us_sponsorship: 'Yes'
+  requires_eu_visa: null
+  legally_allowed_to_work_in_eu: null
+  legally_allowed_to_work_in_us: 'Yes'
+  requires_eu_sponsorship: null
+  canada_work_authorization: null
+  requires_canada_visa: null
+  legally_allowed_to_work_in_canada: null
+  requires_canada_sponsorship: null
+  uk_work_authorization: null
+  requires_uk_visa: null
+  legally_allowed_to_work_in_uk: null
+  requires_uk_sponsorship: null
 work_preferences:
-  remote_work: "[Yes/No]"
-  in_person_work: "[Yes/No]"
-  open_to_relocation: "[Yes/No]"
-  willing_to_complete_assessments: "[Yes/No]"
-  willing_to_undergo_drug_tests: "[Yes/No]"
-  willing_to_undergo_background_checks: "[Yes/No]"
+  remote_work: 'Yes'
+  in_person_work: 'Yes'
+  open_to_relocation: 'Yes'
+  willing_to_complete_assessments: 'Yes'
+  willing_to_undergo_drug_tests: 'Yes'
+  willing_to_undergo_background_checks: 'Yes'

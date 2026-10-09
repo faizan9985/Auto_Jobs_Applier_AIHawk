@@ -1,0 +1,33 @@
+[
+    {
+        "job_id": "9adc422b-4064-479a-8082-582a0b88331c",
+        "description": "",
+        "apply_method": "Easy Apply",
+        "company": "Company",
+        "job_title": "Title",
+        "link": "https://www.linkedin.com/jobs/view/123",
+        "job_recruiter": "",
+        "job_location": "Location",
+        "pdf_path": "file:///X:/Job%20Automation/Auto_Jobs_Applier_AIHawk",
+        "eligibility": {
+            "status": "needs_review",
+            "reasons": [
+                "Job description is unavailable.",
+                "Candidate eligibility profile is unavailable."
+            ],
+            "evidence": [],
+            "sponsorship_status": "unknown",
+            "work_authorization_status": "unknown",
+            "enrollment_status": "unknown",
+            "date_status": "unknown"
+        },
+        "application_status": "submitted",
+        "approval": null,
+        "cover_letter_path": "",
+        "application_answers": [],
+        "state": "submitted",
+        "submitted_at": "2026-09-22T17:51:07.219856+00:00",
+        "failure_reason": null,
+        "skip_reason": null
+    }
+]

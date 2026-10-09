@@ -1,0 +1,62 @@
+[
+    {
+        "job_id": "bd23c70e-7044-4c63-b0c3-6e1c0afc46f8",
+        "description": "Full description. Visa sponsorship is available.",
+        "apply_method": "Easy Apply",
+        "company": "Example",
+        "job_title": "Engineer",
+        "link": "https://www.linkedin.com/jobs/view/123",
+        "job_recruiter": "",
+        "job_location": "Remote",
+        "pdf_path": "file:///X:/Job%20Automation/Auto_Jobs_Applier_AIHawk",
+        "eligibility": {
+            "status": "needs_review",
+            "reasons": [
+                "Candidate eligibility profile is unavailable."
+            ],
+            "evidence": [],
+            "sponsorship_status": "unknown",
+            "work_authorization_status": "unknown",
+            "enrollment_status": "unknown",
+            "date_status": "unknown"
+        },
+        "application_status": "data",
+        "approval": null,
+        "cover_letter_path": "",
+        "application_answers": [],
+        "state": "needs_review",
+        "submitted_at": null,
+        "failure_reason": null,
+        "skip_reason": null
+    },
+    {
+        "job_id": "bd23c70e-7044-4c63-b0c3-6e1c0afc46f8",
+        "description": "Full description. Visa sponsorship is available.",
+        "apply_method": "Easy Apply",
+        "company": "Example",
+        "job_title": "Engineer",
+        "link": "https://www.linkedin.com/jobs/view/123",
+        "job_recruiter": "",
+        "job_location": "Remote",
+        "pdf_path": "file:///X:/Job%20Automation/Auto_Jobs_Applier_AIHawk",
+        "eligibility": {
+            "status": "needs_review",
+            "reasons": [
+                "Candidate eligibility profile is unavailable."
+            ],
+            "evidence": [],
+            "sponsorship_status": "unknown",
+            "work_authorization_status": "unknown",
+            "enrollment_status": "unknown",
+            "date_status": "unknown"
+        },
+        "application_status": "data",
+        "approval": null,
+        "cover_letter_path": "",
+        "application_answers": [],
+        "state": "needs_review",
+        "submitted_at": null,
+        "failure_reason": null,
+        "skip_reason": null
+    }
+]

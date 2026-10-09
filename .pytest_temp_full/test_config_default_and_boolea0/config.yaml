@@ -1,0 +1,43 @@
+apply_once_at_company: true
+company_blacklist:
+- wayfair
+- Crossover
+date:
+  24 hours: true
+  all time: false
+  month: false
+  week: false
+distance: 100
+experienceLevel:
+  associate: true
+  director: false
+  entry: true
+  executive: false
+  internship: false
+  mid-senior level: true
+jobTypes:
+  contract: false
+  full-time: true
+  internship: false
+  other: false
+  part-time: false
+  temporary: true
+  volunteer: true
+job_applicants_threshold:
+  max_applicants: 30
+  min_applicants: 0
+llm_model: gpt-4o-mini
+llm_model_type: openai
+location_blacklist:
+- Brazil
+locations:
+- Germany
+manual_approval_before_submit: true
+minimum_relevance_score: 0
+positions:
+- Software engineer
+remote: true
+tailor_resume_per_job: true
+title_blacklist:
+- word1
+- word2
